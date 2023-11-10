@@ -1,8 +1,21 @@
 #Parser for converting .lin files into .csv files
-
+import glob
+import sys
+import os
 #FLOW OF LOGIC
-#Open file
-#Read header (1st line)
+
+if len(sys.argv) != 2:
+    print("Usage: py linparser.py <directory>\n")
+    exit()
+
+def readFile(filename):
+    if not (os.path.isfile(filename)):
+        return
+    #open file
+    with open(filename, mode='r', encoding='utf-8') as fd:
+        #read header
+        header = fd.readline
+    
 #Split header into parts (sep=',')
 #Read results (2nd line)
 #Read players (3rd line)
