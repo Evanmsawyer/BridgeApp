@@ -26,9 +26,43 @@ class Round:
 
 class Board:
     """Object representing one board of a round in a Bridge tournament"""
+    pos_dic = {
+        1 : "S",
+        2 : "W",
+        3 : "N",
+        4 : "E"
+    }
+    def add_hands(self, hand_data):
+        hand_list = hand_data.split(',')
+        self.hands = []
+        pos = 0
+        for hand in hand_list:
+            self.hands.append(Hand(self.pos_dic[pos], hand))
+            pos += 1
+
     def __init__(self, board_num, bid_info, tricks):
         self.board_num = board_num
+        bid_info = bid_info.split('|')
+        #get dealer position
+        if 1 <= bid_info[5][0] <= 4:
+            self.dealer = self.pos_dic[bid_info[5][0]]
+        else:
+            self.dealer = None
+        #get vulnerability
+        #o = none, n = N/S vulnerability, e = E/W vulnerability, b = both N/S and E/W vulnerability
+        match bid_info[7]:
+            case "o" | "n" | "e" | "b":
+                self.vuln = bid_info[7].upper()
+            case _:
+                self.vuln = None
+        #init table list and add hands
+        self.add_hands(bid_info[5][1:])
+        self.tables = []
+        self.tables.append(Table(bid_info, tricks))
         
+    
+
+
 
 class Table:
     """Object representing one table of one board of a Bridge tournament"""
@@ -47,7 +81,15 @@ class Team:
 
 class Hand:
     """Object representing one hand of a board at a Bridge tournament"""
-    pass
+    trans_table = str.translate("SHDC", ",,,,")
+
+    def __init__(self, pos, data):
+        self.position = pos
+        #split hand by suit
+        data = data.translate(self.trans_table)
+        suit_list = data.split(',')
+        #hand info always goes spades -> hearts -> diamonds -> clubs
+        pass
 
 class Bid:
     """Object representing the bidding phase at a table"""
