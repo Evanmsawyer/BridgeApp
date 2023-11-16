@@ -1,5 +1,5 @@
+from bisect import bisect
 #Contains classes for the linparser.py script
-
 #global dictionary for dealer position
 pos_dic = {
     1 : "S",
@@ -7,9 +7,30 @@ pos_dic = {
     3 : "N",
     4 : "E"
 }
+#tables used for calculating negative raw scores/international matchpoints
+not_vul_scores = (
+    (50, 100, 200), (100, 300, 600), (150, 500, 1000), (200, 800, 1600),
+    (250, 1100, 2200), (300, 1400, 2800), (350, 1700, 3400), (400, 2000, 4000),
+    (450, 2300, 4600), (500, 2600, 5200), (550, 2900, 5500), (600, 3200, 6400), 
+    (650, 3500, 7000))
+vul_scores = (
+    (100, 200, 400), (200, 500, 1000), (300, 800, 1600), (400, 1100, 2200),
+    (500, 1400, 2800), (600, 1700, 3400), (700, 2000, 4000), (800, 2300, 4600),
+    (900, 2600, 5200), (1000, 2900, 5800), (1100, 3200, 6400), (1200, 3500, 7000), 
+    (1300, 3800, 7600))
+imp_calc = (0,20,40,80,120,160,210,260,310,360,420,490,590,740,890,1090,1290,1490,1740,1990,2240,2490,2990,3490,3990,15200)
 
 class Round:
     """Object representing a round of a Bridge tournament"""
+    def score_round(self):
+        team1 = self.teams[0]
+        team2 = self.teams[1]
+        team1.endScore = team1.startScore
+        team2.endScore = team1.startScore
+        for b in self.boards:
+            if b.team1_imps > 0:    team1.endScore += b.team1_imps
+            else:                   team2.endScore += b.team2_imps
+
     def __init__(self, headerParts, playerList):
         self.tournament_name = headerParts[0]
         self.segment = headerParts[1]
@@ -29,13 +50,22 @@ class Round:
         self.total_boards = self.endBoard - self.startBoard + 1
         self.boards = []
         self.board_count = 0
-    
-    def add_board(self, b):
-        self.boards.append(b)
 
 class Board:
     """Object representing one board of a round in a Bridge tournament"""
-    
+    def score_board(self):
+        table1 = self.tables[0]
+        table2 = self.tables[1]
+        team1_raw = table1.score if table1.declarer % 2 == 1 else -table1.score
+        team2_raw = table2.score if table2.declarer % 2 == 1 else -table2.score
+        imp_score = bisect(imp_calc, abs(team1_raw - team2_raw))
+        self.team1_imps = imp_score if team1_raw > team2_raw else -imp_score
+        self.team2_imps = -self.team1_imps
+
+
+    def add_table(self, bid_info, tricks):
+        self.tables.append(Table(self.dealer, bid_info, tricks, self.vuln))
+
     def add_hands(self, hand_data):
         hand_list = hand_data.split(',')
         self.hands = []
@@ -62,16 +92,95 @@ class Board:
         #init table list and add hands
         self.add_hands(bid_info[5][1:])
         self.tables = []
-        self.tables.append(Table(self.dealer, bid_info, tricks))
+        self.add_table(bid_info, tricks)
 
 class Table:
     """Object representing one table of one board of a Bridge tournament"""
-    def __init__(self, dealer, bid_info, tricks):
+    def count_tricks(self):
+        self.tricks_taken = 0
+        for t in self.tricks:
+            #if two positions are on the same team, they are either both even (E/W) or both odd (N/S)
+            if self.declarer % 2 == t.winner % 2:
+                self.tricks_taken += 1
+
+    def add_tricks(self, trick_data):
+        has_claim = False
+        leader = self.declarer
+        self.tricks = []
+        #read through tricks
+        for line in trick_data:
+            if "mc" not in line and "pc" in line:
+                if len(self.tricks) > 0:
+                    leader = self.tricks[-1].winner
+                self.tricks.append(Trick(leader, self.suit, len(self.tricks) + 1, line))
+            elif "mc" in line:
+                has_claim = True
+        if has_claim:
+            claim_trick = trick_data[-1].split('|')
+            self.tricks_taken = claim_trick[-3]
+        else:
+            self.tricks_taken = self.count_tricks()
+
+    def get_declarer(self):
+        for b in self.bids:
+            if b.suit == self.suit and b.declarer % 2 == self.last_bid.declarer % 2:
+                return b.declarer
+
+    def get_score(self):
+        contract_diff = self.tricks_taken - (self.contract_level + 6)
+        #set score table
+        match self.vuln:
+            case "O": score_table = not_vul_scores
+            case "V": score_table = vul_scores
+            case "N": score_table = vul_scores if self.declarer % 2 == 1 else not_vul_scores
+            case "E": score_table = vul_scores if self.declarer % 2 == 0 else not_vul_scores
+        is_vuln = score_table is vul_scores
+        #if contract was made
+        if contract_diff >= 0:
+            #calculate booleans
+            minors = self.suit == 'C' or self.suit == 'D'
+            majors = self.suit == 'H' or self.suit == 'S'
+            nt = not majors and not minors
+            game = (minors and self.contract_level >= 5) or (majors and self.contract_level >= 4) or (nt and self.contract_level >= 3)
+            grand_slam = self.contract_level >= 7
+            small_slam = self.contract_level >= 6 and not grand_slam
+
+            #calculate suit bonuses
+            if majors:      trick_score = self.contract_level * 30
+            elif minors:    trick_score = self.contract_level * 20
+            else:           trick_score = self.contract_level * 40
+            #calculate over-bid bonuses
+            match self.status:
+                case 0:
+                    trick_score += contract_diff * 20 if minors else contract_diff * 30
+                    double_bonus = 0
+                case 1:
+                    trick_score += contract_diff * 200 if is_vuln else contract_diff * 100
+                    double_bonus = 100 if is_vuln else 50
+                case 2:
+                    trick_score += contract_diff * 400 if is_vuln else contract_diff * 200
+                    double_bonus = 100 if is_vuln else 50
+            #calculate game bonus
+            if game:            game_bonus = 500 if is_vuln else 300
+            else:               game_bonus = 50
+            #calculate slam bonuses
+            if grand_slam:      slam_bonus = 1500 if is_vuln else 1000
+            elif small_slam:    slam_bonus = 750 if is_vuln else 500
+            else:               slam_bonus = 0
+
+            self.score = trick_score + double_bonus + game_bonus + slam_bonus
+        #if contract was failed
+        else:
+            contract_diff = -contract_diff
+            self.score = -score_table[contract_diff - 1][self.status]
+
+    def __init__(self, dealer, bid_info, tricks, vuln):
+        self.vuln = vuln
         #set room
         match bid_info[1][0]:
             case 'o' | 'c': self.room = bid_info[1][0].upper()
             case _: self.room = None
-        bid_info = bid_info[8:]
+        bid_info = bid_info[9:]
         #recombine bid info for easier splitting
         bid_str = ""
         for token in bid_info:
@@ -81,26 +190,61 @@ class Table:
         #construct Bid objects
         self.bids = []
         for b in bid_lst:
-            #add bid to list
             self.bids.append(Bid(dealer, b))
-            #increment dealer
             dealer += 1
             if dealer > 4:
                 dealer = 1
-        #store final non-pass bid
-        self.final_bid = self.bids[-4]
-
-
+            if not b.is_pass and len(b.doubled) == 0:
+                self.last_bid = b
+        #store important bid info
+        self.status = self.bids[-4].doubled
+        self.suit = self.last_bid.suit
+        self.declarer = self.get_declarer()
+        self.contract_level = self.last_bid.value
+        self.result = self.contract_level + self.suit
+        self.add_tricks(tricks)
+        #store results of table
+        if self.tricks_taken == self.contract_level + 6:
+            self.result = self.result + "="
+        elif self.tricks_taken > self.contract_level + 6:
+            self.result = self.result + "+" + (self.tricks_taken - (self.contract_level + 6))
+        else:
+            self.result = self.result + "-" + ((self.contract_level + 6) - self.tricks_taken)
+        self.get_score()
 
 class Trick:
     """Object representing one trick at one table of a Bridge tournament"""
-    pass
+    #lookup for card ranks (aces high)
+    rank_lst = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
+    def __init__(self, leader, trump_suit, num, play):
+        self.leader = leader
+        max_lead = -1
+        max_trump = -1
+        #clean play string
+        play = play.replace("pc", "").replace("pg", "").replace("|", "")
+        #split into individual cards
+        self.cards = [play[i:i + 2].upper() for i in range(0, 6, 2)]
+        curr_pos = leader
+        #loop through cards to determine winner
+        for card in self.cards:
+            suit = card[0]
+            val = Trick.rank_lst[int(card[1])]
+            if curr_pos == leader:
+                lead_suit = suit
+            if max_trump == -1 and suit == lead_suit and val > max_lead:
+                max_lead = val
+                self.winner = curr_pos
+            if trump_suit != 'N' and suit == trump_suit and val > max_trump:
+                max_trump = val
+                self.winner = curr_pos
+            curr_pos = (curr_pos % 4) + 1
 
 class Team:
     """Object representing a team participating in a Bridge tournament"""
     def __init__(self, name, startScore, member_list):
         self.teamName = name
         self.startScore = startScore
+        self.endScore = None
         self.members = member_list
 
 class Hand:
@@ -130,10 +274,27 @@ class Hand:
 class Bid:
     """Object representing a bid at a table"""
     def __init__(self, dealer, info):
-        self.dealer = dealer
+        self.declarer = dealer
         split_info = info.partition("an")
         token = split_info[0]
         #check if alerted
-        if token.find('!') >= 0: self.alerted = True
+        if '!' in token: self.alerted = True
         else: self.alerted = False
-        #CONTINUE HERE
+        #parse bid and check for pass/double/redouble
+        self.value = 0
+        self.suit = None
+        self.is_pass = False
+        self.doubled = None
+        match token[0]:
+            case 'p': self.is_pass = True
+            case 'd': self.doubled = 1
+            case 'r': self.doubled = 2
+            case _:
+                self.value = int(token[0])
+                self.suit = token[1].upper()
+                self.doubled = 0
+        #add comment if provided
+        if len(split_info[2]) > 0:
+            self.comment = split_info[2]
+        else:
+            self.comment = None

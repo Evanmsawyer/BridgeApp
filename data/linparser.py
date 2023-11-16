@@ -9,7 +9,7 @@ if len(sys.argv) != 2:
     print("Usage: py linparser.py <directory>\n")
     exit()
 
-def readFile(filename):
+def read_file(filename):
     if not (os.path.isfile(filename)):
         return
     #open file
@@ -31,27 +31,49 @@ def readFile(filename):
         bid_phase = curr_line
         while round.board_count < round.total_boards:
             tricks = []
+            #load first table & create board
             curr_line = fd.readline()
             while not curr_line.startswith("qx"):
                 tricks.append(curr_line)
                 curr_line = fd.readline()
 
-            board = parser_classes.Board(board_num, bid_phase, tricks)
+            curr_board = parser_classes.Board(board_num, bid_phase, tricks)
+            board_num += 1
+            
+            #load second table into board
+            bid_phase = curr_line
+            tricks.clear()
+            curr_line = fd.readline()
+            while len(curr_line) > 0 and not curr_line.startswith("qx"):
+                tricks.append(curr_line)
+                curr_line = fd.readline()
+            curr_board.add_table(bid_phase, tricks)
+            bid_phase = curr_line
+            tricks.clear
+            curr_board.score_board()
+        round.score_round()
+        return round
 
+def write_csv(round):
+    pass
 
-#Create match object
-    #store tournament info
-    #store segment info
-    #store scoring type
-    #store start and end board numbers
-    #create team objects (team name, members, starting score)
-    #calculate total board count for match
-#for each board in match:
-    #read bid info from file
-    #read tricks from file
-    #create board object (has dealer, vulnerability, hand info, suit holding, high card points, bid info, trick info)
-    #parse play 1
-    #parse play 2
-    #calculate scoring of board (if IMP scoring)
-#calculate score of match overall
-#print to csv file(s)
+def main():
+    round_lst = None
+    #read files in
+    if len(sys.argv) > 1:
+        for arg in sys.argv[1:]:
+            if os.path.isdir(arg):
+                for f in glob.iglob(arg + "*.lin"):
+                    round = read_file(f)
+                    write_csv(round)
+            elif os.path.isfile(arg):
+                round = read_file(arg)
+                write_csv(round)
+    else:
+        for f in glob.iglob("*.lin"):
+            round = read_file(f)
+            write_csv(round)
+    #write to csv files
+
+def __init__():
+    main()
