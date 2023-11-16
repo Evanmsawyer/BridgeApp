@@ -3,11 +3,16 @@ import glob
 import sys
 import os
 import parser_classes
-#FLOW OF LOGIC
+import json
 
-if len(sys.argv) != 2:
-    print("Usage: py linparser.py <directory>\n")
-    exit()
+r_id = 0; b_id = 0; h_id = 0
+if os.path.isfile("parser_config.json"):
+    with open("parser_config.json", "r", encoding="utf-8") as f:
+        config = json.load(f)
+    config = config["parser"]
+    r_id = config["r_id"]
+    b_id = config["b_id"]
+    h_id = config["h_id"]
 
 def read_file(filename):
     if not (os.path.isfile(filename)):
@@ -54,12 +59,39 @@ def read_file(filename):
         round.score_round()
         return round
 
-def write_csv(round):
-    pass
+def q(x):
+    return "\"" + str(x) + "\""
+
+def write_csv(round: parser_classes.Round):
+    #open files
+    with (open("round.csv", "a", encoding="UTF-8") as round_csv, open("board.csv", "a", encoding="UTF-8") as board_csv,
+          open("table.csv", "a", encoding="UTF-8") as table_csv, open("hand.csv", "a", encoding="UTF-8") as hand_csv,
+          open("trick.csv", "a", encoding="UTF-8") as trick_csv, open("team.csv", "a", encoding="UTF-8") as team_csv,
+          open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as p_t_csv):
+        #write to round.csv (round_id, tournament_name, team_one_name, team_two_name)
+        print(q(r_id), q(round.tournament_name), q(round.teams[0].team_name), q(round.teams[1].team_name),
+              file=round_csv)
+        #write to board.csv (board_id, round_id, dealer, vuln)
+        for board in round.boards:
+            print(q(b_id), q(r_id), q(board.dealer), q(board.vuln), file=board_csv)
+            #write to hand(hand_id, round_id, position, spades, hearts, diamonds, clubs, hcp)
+            for hand in board.hands:
+                print(q(h_id), q(b_id), q(hand.pos), q(hand.suits[0]), q(hand.suits[1]), q(hand.suits[2]), q(hand.suit[3]),
+                      q(hand.hcp), file=hand_csv)
+                h_id += 1
+            #write to table.csv ()
+    
+    #write to table
+    #write to trick
+    #write to team  
+    #write to player
+
+    #RELATIONSHIPS
+    #write to Plays_table
 
 def main():
     round_lst = None
-    #read files in
+    #read files in and write to CSVs
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
             if os.path.isdir(arg):
@@ -73,7 +105,7 @@ def main():
         for f in glob.iglob("*.lin"):
             round = read_file(f)
             write_csv(round)
-    #write to csv files
+    #remove duplicates from CSVs
 
 def __init__():
     main()

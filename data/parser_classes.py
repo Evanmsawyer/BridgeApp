@@ -50,6 +50,7 @@ class Round:
         self.total_boards = self.endBoard - self.startBoard + 1
         self.boards = []
         self.board_count = 0
+        self.create_id()
 
 class Board:
     """Object representing one board of a round in a Bridge tournament"""
@@ -242,7 +243,7 @@ class Trick:
 class Team:
     """Object representing a team participating in a Bridge tournament"""
     def __init__(self, name, startScore, member_list):
-        self.teamName = name
+        self.team_name = name
         self.startScore = startScore
         self.endScore = None
         self.members = member_list
