@@ -5,7 +5,7 @@ import os
 import parser_classes
 import json
 
-r_id = 0; b_id = 0; h_id = 0
+r_id = 0; b_id = 0; h_id = 0; t_id = 0
 if os.path.isfile("parser_config.json"):
     with open("parser_config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
@@ -13,6 +13,7 @@ if os.path.isfile("parser_config.json"):
     r_id = config["r_id"]
     b_id = config["b_id"]
     h_id = config["h_id"]
+    t_id = config["t_id"]
 
 def read_file(filename):
     if not (os.path.isfile(filename)):
@@ -69,22 +70,35 @@ def write_csv(round: parser_classes.Round):
           open("trick.csv", "a", encoding="UTF-8") as trick_csv, open("team.csv", "a", encoding="UTF-8") as team_csv,
           open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as p_t_csv):
         #write to round.csv (round_id, tournament_name, team_one_name, team_two_name)
-        print(q(r_id), q(round.tournament_name), q(round.teams[0].team_name), q(round.teams[1].team_name),
-              file=round_csv)
+        print(r_id, round, file=round_csv, sep=",")
+
         #write to board.csv (board_id, round_id, dealer, vuln)
         for board in round.boards:
-            print(q(b_id), q(r_id), q(board.dealer), q(board.vuln), file=board_csv)
-            #write to hand(hand_id, round_id, position, spades, hearts, diamonds, clubs, hcp)
+            print(b_id, r_id, board, file=board_csv, sep=",")
+            #write to hand.csv (hand_id, board_id, position, spades, hearts, diamonds, clubs, hcp)
             for hand in board.hands:
-                print(q(h_id), q(b_id), q(hand.pos), q(hand.suits[0]), q(hand.suits[1]), q(hand.suits[2]), q(hand.suit[3]),
-                      q(hand.hcp), file=hand_csv)
+                print(h_id, b_id, hand, file=hand_csv, sep=",")
                 h_id += 1
-            #write to table.csv ()
-    
-    #write to table
-    #write to trick
-    #write to team  
-    #write to player
+
+            #write to table.csv (table_id, board_id, paired_id, bid_phase, last_bid, result, declarer_score)
+            table_1 = board.tables[0]
+            table_2 = board.tables[1]
+            print(t_id, (t_id + 1), b_id, table_1, file=table_csv, sep=",")
+            print((t_id + 1), t_id, b_id, table_2, file=table_csv, sep=",")
+
+            #write to trick (num, t_id, play, start_pos)
+            for trick in table_1.tricks:
+                print(q(trick.num), t_id, trick, file=trick_csv, sep=",")
+            for trick in table_2.tricks:
+                print(q(trick.num), (t_id + 1), trick, file=trick_csv, sep=",")
+            
+        #write to team.csv
+        for team in round.teams:
+            print(team, file=team_csv)
+            #write to player.csv
+            for player in team.members:
+                p_string = '\"' + player + '\"'
+                print(p_string + team, sep=',', file=player_csv)
 
     #RELATIONSHIPS
     #write to Plays_table

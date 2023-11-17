@@ -51,6 +51,10 @@ class Round:
         self.boards = []
         self.board_count = 0
         self.create_id()
+    
+    def __str__(self):
+        res = '\"' + self.tournament_name + '\",\"' + self.teams[0].name + '\",\"' + self.teams[1].name + '\"'
+        return res
 
 class Board:
     """Object representing one board of a round in a Bridge tournament"""
@@ -62,7 +66,6 @@ class Board:
         imp_score = bisect(imp_calc, abs(team1_raw - team2_raw))
         self.team1_imps = imp_score if team1_raw > team2_raw else -imp_score
         self.team2_imps = -self.team1_imps
-
 
     def add_table(self, bid_info, tricks):
         self.tables.append(Table(self.dealer, bid_info, tricks, self.vuln))
@@ -82,18 +85,22 @@ class Board:
         if 1 <= bid_info[5][0] <= 4:
             self.dealer = bid_info[5][0]
         else:
-            self.dealer = None
+            self.dealer = ""
         #get vulnerability
         #o = none, n = N/S vulnerability, e = E/W vulnerability, b = both N/S and E/W vulnerability
         match bid_info[7]:
             case "o" | "n" | "e" | "b":
                 self.vuln = bid_info[7].upper()
             case _:
-                self.vuln = None
+                self.vuln = ""
         #init table list and add hands
         self.add_hands(bid_info[5][1:])
         self.tables = []
         self.add_table(bid_info, tricks)
+    
+    def __str__(self):
+        res = '\"' + pos_dic[self.dealer] + '\",\"' + self.vuln + '\"'
+        return res
 
 class Table:
     """Object representing one table of one board of a Bridge tournament"""
@@ -213,12 +220,26 @@ class Table:
             self.result = self.result + "-" + ((self.contract_level + 6) - self.tricks_taken)
         self.get_score()
 
+    def __str__(self):
+        sep = '\",\"'
+        res = '\"' + self.bids + sep + self.bids[0] + sep + self.last_bid + sep + self.result + '\",' + self.score
+        return res
+
 class Trick:
     """Object representing one trick at one table of a Bridge tournament"""
     #lookup for card ranks (aces high)
     rank_lst = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
+    def __str__(self):
+        sep = '\",\"'
+        res = '\"' + pos_dic[self.leader] + sep + pos_dic[self.winner] + sep
+        for card in self.cards:
+            res += card
+        res += '\"'
+        return res
+
     def __init__(self, leader, trump_suit, num, play):
-        self.leader = leader
+        self.leader = pos_dic[leader]
+        self.num = num
         max_lead = -1
         max_trump = -1
         #clean play string
@@ -242,6 +263,10 @@ class Trick:
 
 class Team:
     """Object representing a team participating in a Bridge tournament"""
+
+    def __str__(self):
+        return '\"' + self.team_name + '\"'
+
     def __init__(self, name, startScore, member_list):
         self.team_name = name
         self.startScore = startScore
@@ -269,10 +294,33 @@ class Hand:
         #suit order is always spades -> hearts -> diamonds -> clubs
         data = data.translate(self.trans_table)
         self.suits = data.split(',')
-        #get suit distribution
+        #get suit distribution and hcp
+        self.dist = ""
+        self.dist += [str(len(x)) for x in self.suits]
         self.get_hcp()
+    
+    def __str__(self):
+        sep = '\",\"'
+        res = ('\"' + pos_dic[self.position] + sep + self.suits[0] + sep + self.suits[1] + 
+               sep + self.suits[2] + sep + self.suits[3] + '\",' + self.hcp + ',\"' + self.dist + '\"')
+        return res
 
 class Bid:
+
+    def __str__(self):
+        res = pos_dic[self.declarer]
+        if self.is_pass:
+            res += "P"
+            return res
+        match self.doubled:
+            case 0:
+                res += str(self.value) + self.suit
+            case 1:
+                res += "X"
+            case 2:
+                res += "XX"
+        return res
+        
     """Object representing a bid at a table"""
     def __init__(self, dealer, info):
         self.declarer = dealer
@@ -285,7 +333,7 @@ class Bid:
         self.value = 0
         self.suit = None
         self.is_pass = False
-        self.doubled = None
+        self.doubled = 0
         match token[0]:
             case 'p': self.is_pass = True
             case 'd': self.doubled = 1
