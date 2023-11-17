@@ -29,7 +29,7 @@ CREATE TABLE Board (
 
 -- Creating the Table table
 CREATE TABLE TableEntity (
-    TableID VARCHAR(255) PRIMARY KEY,
+    TableID INT PRIMARY KEY,
     PairedTableName VARCHAR(255),
     BoardID INT,
     BidPhase TEXT,
