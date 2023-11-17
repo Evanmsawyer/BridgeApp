@@ -2,6 +2,7 @@ from bisect import bisect
 #Contains classes for the linparser.py script
 #global dictionary for dealer position
 pos_dic = {
+   -1 : "",
     1 : "S",
     2 : "W",
     3 : "N",
@@ -44,13 +45,12 @@ class Round:
         #build player list for teams
         team_list = [playerList[0], playerList[2], playerList[5], playerList[7]]
         self.teams.append(Team(headerParts[5], headerParts[6], team_list))
-        team_list = playerList - team_list
+        team_list = [playerList[1], playerList[3], playerList[4], playerList[6]]
         self.teams.append(Team(headerParts[7], headerParts[8], team_list))
         #initialize board array
         self.total_boards = self.endBoard - self.startBoard + 1
         self.boards = []
         self.board_count = 0
-        self.create_id()
     
     def __str__(self):
         res = '\"' + self.tournament_name + '\",\"' + self.teams[0].name + '\",\"' + self.teams[1].name + '\"'
@@ -82,19 +82,23 @@ class Board:
         self.board_num = board_num
         bid_info = bid_info.split('|')
         #get dealer position
-        if 1 <= bid_info[5][0] <= 4:
-            self.dealer = bid_info[5][0]
+        i = bid_info.index("md")
+        if 1 <= bid_info[i + 1][0] <= 4:
+            self.dealer = int(bid_info[i + 1][0])
         else:
-            self.dealer = ""
+            self.dealer = -1
         #get vulnerability
+        i = bid_info.index("sv")
         #o = none, n = N/S vulnerability, e = E/W vulnerability, b = both N/S and E/W vulnerability
-        match bid_info[7]:
+        match bid_info[i + 1]:
             case "o" | "n" | "e" | "b":
-                self.vuln = bid_info[7].upper()
+                self.vuln = bid_info[i + 1].upper()
+            case "0":
+                self.vuln = "O"
             case _:
                 self.vuln = ""
         #init table list and add hands
-        self.add_hands(bid_info[5][1:])
+        self.add_hands(bid_info[i + 1][1:])
         self.tables = []
         self.add_table(bid_info, tricks)
     
@@ -187,8 +191,9 @@ class Table:
         #set room
         match bid_info[1][0]:
             case 'o' | 'c': self.room = bid_info[1][0].upper()
-            case _: self.room = None
-        bid_info = bid_info[9:]
+            case _: self.room = ""
+        i = bid_info.index("mb")
+        bid_info = bid_info[i + 1:]
         #recombine bid info for easier splitting
         bid_str = ""
         for token in bid_info:

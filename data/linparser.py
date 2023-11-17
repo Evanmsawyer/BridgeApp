@@ -24,8 +24,6 @@ def read_file(filename):
         header = fd.readline()
         #split header
         headerParts = header[3:].strip('|').split(sep=',')
-        #read results
-        res = fd.readline()
         #read players
         player_raw = fd.readline()
         player_list = player_raw.split(sep='|')[1].split(sep=',')
@@ -39,6 +37,9 @@ def read_file(filename):
             tricks = []
             #load first table & create board
             curr_line = fd.readline()
+            while not curr_line.startswith("pc"):
+                bid_phase += curr_line
+            bid_phase = bid_phase.replace("\n", "")
             while not curr_line.startswith("qx"):
                 tricks.append(curr_line)
                 curr_line = fd.readline()
@@ -48,6 +49,9 @@ def read_file(filename):
             
             #load second table into board
             bid_phase = curr_line
+            while not curr_line.startswith("pc"):
+                bid_phase += curr_line
+            bid_phase = bid_phase.replace("\n", "")
             tricks.clear()
             curr_line = fd.readline()
             while len(curr_line) > 0 and not curr_line.startswith("qx"):
@@ -127,5 +131,5 @@ def main():
         with open(f, mode="w", encoding="UTF-8") as fd:
             fd.writelines(l_set)
 
-def __init__():
+if __name__ == "__main__":
     main()
