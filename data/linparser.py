@@ -104,7 +104,6 @@ def write_csv(round: parser_classes.Round):
     #write to Plays_table
 
 def main():
-    round_lst = None
     #read files in and write to CSVs
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
@@ -120,6 +119,13 @@ def main():
             round = read_file(f)
             write_csv(round)
     #remove duplicates from CSVs
+    for f in glob.iglob("*.csv"):
+        l_set = set()
+        with open(f, mode="r", encoding="UTF-8") as fd:
+            for line in fd:
+                l_set.add(line)
+        with open(f, mode="w", encoding="UTF-8") as fd:
+            fd.writelines(l_set)
 
 def __init__():
     main()
