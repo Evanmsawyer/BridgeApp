@@ -53,7 +53,7 @@ class Round:
         self.board_count = 0
     
     def __str__(self):
-        res = '\"' + self.tournament_name + '\",\"' + self.teams[0].name + '\",\"' + self.teams[1].name + '\"'
+        res = '\"' + self.tournament_name + '\",\"' + self.teams[0].team_name + '\",\"' + self.teams[1].team_name + '\"'
         return res
 
 class Board:
@@ -68,14 +68,15 @@ class Board:
         self.team2_imps = -self.team1_imps
 
     def add_table(self, bid_info, tricks):
+        bid_info = bid_info.split('|')
         self.tables.append(Table(self.dealer, bid_info, tricks, self.vuln))
 
     def add_hands(self, hand_data):
         hand_list = hand_data.split(',')
         self.hands = []
-        pos = 0
+        pos = 1
         for hand in hand_list:
-            self.hands.append(Hand(pos_dic[pos], hand))
+            self.hands.append(Hand(pos, hand))
             pos += 1
 
     def __init__(self, board_num, bid_info, tricks):
@@ -83,16 +84,16 @@ class Board:
         bid_info = bid_info.split('|')
         #get dealer position
         i = bid_info.index("md")
-        if 1 <= bid_info[i + 1][0] <= 4:
+        if 1 <= int(bid_info[i + 1][0]) <= 4:
             self.dealer = int(bid_info[i + 1][0])
         else:
             self.dealer = -1
         #get vulnerability
-        i = bid_info.index("sv")
+        j = bid_info.index("sv")
         #o = none, n = N/S vulnerability, e = E/W vulnerability, b = both N/S and E/W vulnerability
-        match bid_info[i + 1]:
+        match bid_info[j + 1]:
             case "o" | "n" | "e" | "b":
-                self.vuln = bid_info[i + 1].upper()
+                self.vuln = bid_info[j + 1].upper()
             case "0":
                 self.vuln = "O"
             case _:
@@ -100,7 +101,7 @@ class Board:
         #init table list and add hands
         self.add_hands(bid_info[i + 1][1:])
         self.tables = []
-        self.add_table(bid_info, tricks)
+        self.tables.append(Table(self.dealer, bid_info, tricks, self.vuln))
     
     def __str__(self):
         res = '\"' + pos_dic[self.dealer] + '\",\"' + self.vuln + '\"'
@@ -119,19 +120,22 @@ class Table:
         has_claim = False
         leader = self.declarer
         self.tricks = []
+        trick_str = ""
+        for s in trick_data: trick_str += s
+        trick_str = trick_str.split('\n')
         #read through tricks
-        for line in trick_data:
+        for line in trick_str:
             if "mc" not in line and "pc" in line:
                 if len(self.tricks) > 0:
                     leader = self.tricks[-1].winner
                 self.tricks.append(Trick(leader, self.suit, len(self.tricks) + 1, line))
             elif "mc" in line:
                 has_claim = True
+                claim_trick = line.split('|')
         if has_claim:
-            claim_trick = trick_data[-1].split('|')
-            self.tricks_taken = claim_trick[-3]
+            self.tricks_taken = int(claim_trick[-4])
         else:
-            self.tricks_taken = self.count_tricks()
+            self.count_tricks()
 
     def get_declarer(self):
         for b in self.bids:
@@ -143,7 +147,7 @@ class Table:
         #set score table
         match self.vuln:
             case "O": score_table = not_vul_scores
-            case "V": score_table = vul_scores
+            case "B": score_table = vul_scores
             case "N": score_table = vul_scores if self.declarer % 2 == 1 else not_vul_scores
             case "E": score_table = vul_scores if self.declarer % 2 == 0 else not_vul_scores
         is_vuln = score_table is vul_scores
@@ -203,26 +207,27 @@ class Table:
         #construct Bid objects
         self.bids = []
         for b in bid_lst:
-            self.bids.append(Bid(dealer, b))
+            bid = Bid(dealer, b)
+            self.bids.append(bid)
             dealer += 1
             if dealer > 4:
                 dealer = 1
-            if not b.is_pass and len(b.doubled) == 0:
-                self.last_bid = b
+            if (not bid.is_pass) and bid.doubled == 0:
+                self.last_bid = bid
         #store important bid info
         self.status = self.bids[-4].doubled
         self.suit = self.last_bid.suit
         self.declarer = self.get_declarer()
         self.contract_level = self.last_bid.value
-        self.result = self.contract_level + self.suit
+        self.result = str(self.contract_level) + self.suit
         self.add_tricks(tricks)
         #store results of table
         if self.tricks_taken == self.contract_level + 6:
             self.result = self.result + "="
         elif self.tricks_taken > self.contract_level + 6:
-            self.result = self.result + "+" + (self.tricks_taken - (self.contract_level + 6))
+            self.result = self.result + "+" + str(self.tricks_taken - (self.contract_level + 6))
         else:
-            self.result = self.result + "-" + ((self.contract_level + 6) - self.tricks_taken)
+            self.result = self.result + "-" + str((self.contract_level + 6) - self.tricks_taken)
         self.get_score()
 
     def __str__(self):
@@ -243,19 +248,19 @@ class Trick:
         return res
 
     def __init__(self, leader, trump_suit, num, play):
-        self.leader = pos_dic[leader]
+        self.leader = leader
         self.num = num
         max_lead = -1
         max_trump = -1
         #clean play string
         play = play.replace("pc", "").replace("pg", "").replace("|", "")
         #split into individual cards
-        self.cards = [play[i:i + 2].upper() for i in range(0, 6, 2)]
+        self.cards = [play[i:i + 2].upper() for i in range(0, 8, 2)]
         curr_pos = leader
         #loop through cards to determine winner
         for card in self.cards:
             suit = card[0]
-            val = Trick.rank_lst[int(card[1])]
+            val = Trick.rank_lst.index(card[1])
             if curr_pos == leader:
                 lead_suit = suit
             if max_trump == -1 and suit == lead_suit and val > max_lead:
@@ -274,13 +279,13 @@ class Team:
 
     def __init__(self, name, startScore, member_list):
         self.team_name = name
-        self.startScore = startScore
-        self.endScore = None
+        self.startScore = int(startScore)
+        self.endScore = int(startScore)
         self.members = member_list
 
 class Hand:
     """Object representing one hand of a board at a Bridge tournament"""
-    trans_table = str.translate("SHDC", ",,,,")
+    trans_table = str.maketrans("HDC", ",,,")
 
     def get_hcp(self):
         #calculate high card points for hand
@@ -297,11 +302,12 @@ class Hand:
         self.position = pos
         #split hand by suit
         #suit order is always spades -> hearts -> diamonds -> clubs
-        data = data.translate(self.trans_table)
+        data = data[1:].translate(self.trans_table)
         self.suits = data.split(',')
         #get suit distribution and hcp
         self.dist = ""
-        self.dist += [str(len(x)) for x in self.suits]
+        for suit in self.suits:
+            self.dist += str(len(suit))
         self.get_hcp()
     
     def __str__(self):
@@ -311,7 +317,7 @@ class Hand:
         return res
 
 class Bid:
-
+    """Object representing a bid at a table"""
     def __str__(self):
         res = pos_dic[self.declarer]
         if self.is_pass:
@@ -325,8 +331,7 @@ class Bid:
             case 2:
                 res += "XX"
         return res
-        
-    """Object representing a bid at a table"""
+
     def __init__(self, dealer, info):
         self.declarer = dealer
         split_info = info.partition("an")

@@ -23,7 +23,9 @@ def read_file(filename):
         #read header
         header = fd.readline()
         #split header
-        headerParts = header[3:].strip('|').split(sep=',')
+        headerParts = header[3:].replace("|", "").replace("\n", "").split(sep=',')
+        #get results
+        rs = fd.readline()
         #read players
         player_raw = fd.readline()
         player_list = player_raw.split(sep='|')[1].split(sep=',')
@@ -32,35 +34,45 @@ def read_file(filename):
         round = parser_classes.Round(headerParts, player_list)
         board_num = round.startBoard
         curr_line = fd.readline()
+        while not curr_line.startswith("qx"):
+            curr_line = fd.readline()
         bid_phase = curr_line
-        while round.board_count < round.total_boards:
+
+        while (round.board_count < round.total_boards) and curr_line != '':
             tricks = []
+
             #load first table & create board
             curr_line = fd.readline()
             while not curr_line.startswith("pc"):
                 bid_phase += curr_line
+                curr_line = fd.readline()
             bid_phase = bid_phase.replace("\n", "")
             while not curr_line.startswith("qx"):
-                tricks.append(curr_line)
+                if not (curr_line.startswith("nt") or curr_line == "\n"):
+                    tricks += curr_line
                 curr_line = fd.readline()
 
             curr_board = parser_classes.Board(board_num, bid_phase, tricks)
+            round.boards.append(curr_board)
             board_num += 1
             
             #load second table into board
             bid_phase = curr_line
             while not curr_line.startswith("pc"):
                 bid_phase += curr_line
+                curr_line = fd.readline()
             bid_phase = bid_phase.replace("\n", "")
             tricks.clear()
             curr_line = fd.readline()
             while len(curr_line) > 0 and not curr_line.startswith("qx"):
-                tricks.append(curr_line)
+                if not (curr_line.startswith("nt") or curr_line == "\n"):
+                    tricks += curr_line
                 curr_line = fd.readline()
             curr_board.add_table(bid_phase, tricks)
             bid_phase = curr_line
             tricks.clear
             curr_board.score_board()
+            round.board_count += 1
         round.score_round()
         return round
 
@@ -129,7 +141,8 @@ def main():
             for line in fd:
                 l_set.add(line)
         with open(f, mode="w", encoding="UTF-8") as fd:
-            fd.writelines(l_set)
+            for line in l_set:
+                print(line, file=fd, end="")
 
 if __name__ == "__main__":
     main()
