@@ -232,7 +232,10 @@ class Table:
 
     def __str__(self):
         sep = '\",\"'
-        res = '\"' + self.bids + sep + self.bids[0] + sep + self.last_bid + sep + self.result + '\",' + self.score
+        res = '\"'
+        for b in self.bids:
+            res += str(b)
+        res += sep + str(self.bids[0]) + sep + str(self.last_bid) + sep + self.result + '\",' + str(self.score)
         return res
 
 class Trick:
@@ -313,7 +316,7 @@ class Hand:
     def __str__(self):
         sep = '\",\"'
         res = ('\"' + pos_dic[self.position] + sep + self.suits[0] + sep + self.suits[1] + 
-               sep + self.suits[2] + sep + self.suits[3] + '\",' + self.hcp + ',\"' + self.dist + '\"')
+               sep + self.suits[2] + sep + self.suits[3] + '\",' + str(self.hcp) + ',\"' + str(self.dist) + '\"')
         return res
 
 class Bid:

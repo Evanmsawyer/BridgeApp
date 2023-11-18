@@ -5,7 +5,7 @@ import os
 import parser_classes
 import json
 
-r_id = 0; b_id = 0; h_id = 0; t_id = 0
+r_id = 0; b_id = 0; t_id = 0
 if os.path.isfile("parser_config.json"):
     with open("parser_config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
@@ -80,6 +80,7 @@ def q(x):
     return "\"" + str(x) + "\""
 
 def write_csv(round: parser_classes.Round):
+    global r_id, b_id, t_id
     #open files
     with (open("round.csv", "a", encoding="UTF-8") as round_csv, open("board.csv", "a", encoding="UTF-8") as board_csv,
           open("table.csv", "a", encoding="UTF-8") as table_csv, open("hand.csv", "a", encoding="UTF-8") as hand_csv,
@@ -92,6 +93,7 @@ def write_csv(round: parser_classes.Round):
         for board in round.boards:
             print(b_id, r_id, board, file=board_csv, sep=",")
             #write to hand.csv (hand_id, board_id, position, spades, hearts, diamonds, clubs, hcp)
+            h_id = 1
             for hand in board.hands:
                 print(h_id, b_id, hand, file=hand_csv, sep=",")
                 h_id += 1
@@ -104,9 +106,12 @@ def write_csv(round: parser_classes.Round):
 
             #write to trick (num, t_id, play, start_pos)
             for trick in table_1.tricks:
-                print(q(trick.num), t_id, trick, file=trick_csv, sep=",")
+                print(trick.num, t_id, trick, file=trick_csv, sep=",")
             for trick in table_2.tricks:
-                print(q(trick.num), (t_id + 1), trick, file=trick_csv, sep=",")
+                print(trick.num, (t_id + 1), trick, file=trick_csv, sep=",")
+            
+            b_id += 1
+            t_id += 2
             
         #write to team.csv
         for team in round.teams:
@@ -114,10 +119,8 @@ def write_csv(round: parser_classes.Round):
             #write to player.csv
             for player in team.members:
                 p_string = '\"' + player + '\"'
-                print(p_string + team, sep=',', file=player_csv)
-
-    #RELATIONSHIPS
-    #write to Plays_table
+                print(p_string, team, sep=',', file=player_csv)
+        r_id += 1
 
 def main():
     #read files in and write to CSVs
