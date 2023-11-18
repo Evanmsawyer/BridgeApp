@@ -1,6 +1,7 @@
+--Initialize the database
+CREATE DATABASE IF NOT EXISTS BridgeDB
 
 -- SQL commands to generate the bridge app database tables.
-
 -- Creating the Team table
 CREATE TABLE Team (
     Name VARCHAR(255) PRIMARY KEY
