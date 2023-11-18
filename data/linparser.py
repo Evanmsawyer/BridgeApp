@@ -116,8 +116,7 @@ def write_csv(round: parser_classes.Round):
                     print((t_id + 1), pos, name, team, sep=",", file=plays_csv)
                 else:
                     print(t_id, pos, name, team, sep=",", file=plays_csv)
-
-
+                    
             b_id += 1
             t_id += 2
             
