@@ -5,14 +5,13 @@ import os
 import parser_classes
 import json
 
-r_id = 0; b_id = 0; h_id = 0; t_id = 0
+r_id = 0; b_id = 0; t_id = 0
 if os.path.isfile("parser_config.json"):
     with open("parser_config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
     config = config["parser"]
     r_id = config["r_id"]
     b_id = config["b_id"]
-    h_id = config["h_id"]
     t_id = config["t_id"]
 
 def read_file(filename):
@@ -23,7 +22,9 @@ def read_file(filename):
         #read header
         header = fd.readline()
         #split header
-        headerParts = header[3:].strip('|').split(sep=',')
+        headerParts = header[3:].replace("|", "").replace("\n", "").split(sep=',')
+        #get results
+        rs = fd.readline()
         #read players
         player_raw = fd.readline()
         player_list = player_raw.split(sep='|')[1].split(sep=',')
@@ -32,47 +33,55 @@ def read_file(filename):
         round = parser_classes.Round(headerParts, player_list)
         board_num = round.startBoard
         curr_line = fd.readline()
+        while not curr_line.startswith("qx"):
+            curr_line = fd.readline()
         bid_phase = curr_line
-        while round.board_count < round.total_boards:
+
+        while (round.board_count < round.total_boards) and curr_line != '':
             tricks = []
+
             #load first table & create board
             curr_line = fd.readline()
             while not curr_line.startswith("pc"):
                 bid_phase += curr_line
+                curr_line = fd.readline()
             bid_phase = bid_phase.replace("\n", "")
             while not curr_line.startswith("qx"):
-                tricks.append(curr_line)
+                if not (curr_line.startswith("nt") or curr_line == "\n"):
+                    tricks += curr_line
                 curr_line = fd.readline()
 
             curr_board = parser_classes.Board(board_num, bid_phase, tricks)
+            round.boards.append(curr_board)
             board_num += 1
             
             #load second table into board
             bid_phase = curr_line
             while not curr_line.startswith("pc"):
                 bid_phase += curr_line
+                curr_line = fd.readline()
             bid_phase = bid_phase.replace("\n", "")
             tricks.clear()
             curr_line = fd.readline()
             while len(curr_line) > 0 and not curr_line.startswith("qx"):
-                tricks.append(curr_line)
+                if not (curr_line.startswith("nt") or curr_line == "\n"):
+                    tricks += curr_line
                 curr_line = fd.readline()
             curr_board.add_table(bid_phase, tricks)
             bid_phase = curr_line
             tricks.clear
             curr_board.score_board()
+            round.board_count += 1
         round.score_round()
         return round
 
-def q(x):
-    return "\"" + str(x) + "\""
-
 def write_csv(round: parser_classes.Round):
+    global r_id, b_id, t_id
     #open files
     with (open("round.csv", "a", encoding="UTF-8") as round_csv, open("board.csv", "a", encoding="UTF-8") as board_csv,
           open("table.csv", "a", encoding="UTF-8") as table_csv, open("hand.csv", "a", encoding="UTF-8") as hand_csv,
           open("trick.csv", "a", encoding="UTF-8") as trick_csv, open("team.csv", "a", encoding="UTF-8") as team_csv,
-          open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as p_t_csv):
+          open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as plays_csv):
         #write to round.csv (round_id, tournament_name, team_one_name, team_two_name)
         print(r_id, round, file=round_csv, sep=",")
 
@@ -80,6 +89,7 @@ def write_csv(round: parser_classes.Round):
         for board in round.boards:
             print(b_id, r_id, board, file=board_csv, sep=",")
             #write to hand.csv (hand_id, board_id, position, spades, hearts, diamonds, clubs, hcp)
+            h_id = 1
             for hand in board.hands:
                 print(h_id, b_id, hand, file=hand_csv, sep=",")
                 h_id += 1
@@ -92,9 +102,24 @@ def write_csv(round: parser_classes.Round):
 
             #write to trick (num, t_id, play, start_pos)
             for trick in table_1.tricks:
-                print(q(trick.num), t_id, trick, file=trick_csv, sep=",")
+                print(trick.num, t_id, trick, file=trick_csv, sep=",")
             for trick in table_2.tricks:
-                print(q(trick.num), (t_id + 1), trick, file=trick_csv, sep=",")
+                print(trick.num, (t_id + 1), trick, file=trick_csv, sep=",")
+            
+            #write to plays_table.csv
+            for player in round.player_list:
+                i = round.player_list.index(player)
+                team = round.teams[0] if player in round.teams[0].members else round.teams[1]
+                pos = '\"' + parser_classes.pos_dic[(i % 4) + 1] + '\"'
+                name = '\"' + player + '\"'
+                if(i > 3):
+                    print((t_id + 1), pos, name, team, sep=",", file=plays_csv)
+                else:
+                    print(t_id, pos, name, team, sep=",", file=plays_csv)
+
+
+            b_id += 1
+            t_id += 2
             
         #write to team.csv
         for team in round.teams:
@@ -102,10 +127,8 @@ def write_csv(round: parser_classes.Round):
             #write to player.csv
             for player in team.members:
                 p_string = '\"' + player + '\"'
-                print(p_string + team, sep=',', file=player_csv)
-
-    #RELATIONSHIPS
-    #write to Plays_table
+                print(p_string, team, sep=',', file=player_csv)
+        r_id += 1
 
 def main():
     #read files in and write to CSVs
@@ -113,23 +136,40 @@ def main():
         for arg in sys.argv[1:]:
             if os.path.isdir(arg):
                 for f in glob.iglob(arg + "*.lin"):
-                    round = read_file(f)
-                    write_csv(round)
+                    try:
+                        round = read_file(f)
+                        write_csv(round)
+                    except Exception as err:
+                        print("Error on file " + f + ":", err)
             elif os.path.isfile(arg):
-                round = read_file(arg)
-                write_csv(round)
+                try:
+                    round = read_file(arg)
+                    write_csv(round)
+                except Exception as err:
+                    print("Error on argument " + arg + ":", err)
     else:
         for f in glob.iglob("*.lin"):
-            round = read_file(f)
-            write_csv(round)
+            try:
+                round = read_file(f)
+                write_csv(round)
+            except Exception as err:
+                print("Error on file " + f + ":", err)
     #remove duplicates from CSVs
-    for f in glob.iglob("*.csv"):
-        l_set = set()
-        with open(f, mode="r", encoding="UTF-8") as fd:
-            for line in fd:
-                l_set.add(line)
-        with open(f, mode="w", encoding="UTF-8") as fd:
-            fd.writelines(l_set)
+    try:
+        for f in glob.iglob("*.csv"):
+            l_set = set()
+            with open(f, mode="r", encoding="UTF-8") as fd:
+                for line in fd:
+                    l_set.add(line)
+            with open(f, mode="w", encoding="UTF-8") as fd:
+                for line in l_set:
+                    print(line, file=fd, end="")
+    except Exception as err:
+        print("Error removing duplicate tuples from CSVs:", err)
+    
+    with open("config_parser.json", mode="w", encoding="UTF-8") as f:
+        s = "{\n  \"parser\": {\n    \"r_id\": " + str(r_id) + ",\n    \"b_id\": "+ str(b_id) +",\n    \"t_id\": " + str(t_id) + "\n  }\n}"
+        f.write(s)
 
 if __name__ == "__main__":
     main()
