@@ -81,7 +81,7 @@ def write_csv(round: parser_classes.Round):
     with (open("round.csv", "a", encoding="UTF-8") as round_csv, open("board.csv", "a", encoding="UTF-8") as board_csv,
           open("table.csv", "a", encoding="UTF-8") as table_csv, open("hand.csv", "a", encoding="UTF-8") as hand_csv,
           open("trick.csv", "a", encoding="UTF-8") as trick_csv, open("team.csv", "a", encoding="UTF-8") as team_csv,
-          open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as p_t_csv):
+          open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as plays_csv):
         #write to round.csv (round_id, tournament_name, team_one_name, team_two_name)
         print(r_id, round, file=round_csv, sep=",")
 
@@ -106,6 +106,18 @@ def write_csv(round: parser_classes.Round):
             for trick in table_2.tricks:
                 print(trick.num, (t_id + 1), trick, file=trick_csv, sep=",")
             
+            #write to plays_table.csv
+            for player in round.player_list:
+                i = round.player_list.index(player)
+                team = round.teams[0] if player in round.teams[0].members else round.teams[1]
+                pos = '\"' + parser_classes.pos_dic[(i % 4) + 1] + '\"'
+                name = '\"' + player + '\"'
+                if(i > 3):
+                    print((t_id + 1), pos, name, team, sep=",", file=plays_csv)
+                else:
+                    print(t_id, pos, name, team, sep=",", file=plays_csv)
+
+
             b_id += 1
             t_id += 2
             
@@ -124,24 +136,36 @@ def main():
         for arg in sys.argv[1:]:
             if os.path.isdir(arg):
                 for f in glob.iglob(arg + "*.lin"):
-                    round = read_file(f)
-                    write_csv(round)
+                    try:
+                        round = read_file(f)
+                        write_csv(round)
+                    except Exception as err:
+                        print("Error on file " + f + ":", err)
             elif os.path.isfile(arg):
-                round = read_file(arg)
-                write_csv(round)
+                try:
+                    round = read_file(arg)
+                    write_csv(round)
+                except Exception as err:
+                    print("Error on argument " + arg + ":", err)
     else:
         for f in glob.iglob("*.lin"):
-            round = read_file(f)
-            write_csv(round)
+            try:
+                round = read_file(f)
+                write_csv(round)
+            except Exception as err:
+                print("Error on file " + f + ":", err)
     #remove duplicates from CSVs
-    for f in glob.iglob("*.csv"):
-        l_set = set()
-        with open(f, mode="r", encoding="UTF-8") as fd:
-            for line in fd:
-                l_set.add(line)
-        with open(f, mode="w", encoding="UTF-8") as fd:
-            for line in l_set:
-                print(line, file=fd, end="")
+    try:
+        for f in glob.iglob("*.csv"):
+            l_set = set()
+            with open(f, mode="r", encoding="UTF-8") as fd:
+                for line in fd:
+                    l_set.add(line)
+            with open(f, mode="w", encoding="UTF-8") as fd:
+                for line in l_set:
+                    print(line, file=fd, end="")
+    except Exception as err:
+        print("Error removing duplicate tuples from CSVs:", err)
     
     with open("config_parser.json", mode="w", encoding="UTF-8") as f:
         s = "{\n  \"parser\": {\n    \"r_id\": " + str(r_id) + ",\n    \"b_id\": "+ str(b_id) +",\n    \"t_id\": " + str(t_id) + "\n  }\n}"

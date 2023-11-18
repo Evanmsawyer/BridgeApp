@@ -42,6 +42,7 @@ class Round:
         self.startBoard = int(headerParts[3])
         self.endBoard = int(headerParts[4])
         self.teams = []
+        self.player_list = playerList
         #build player list for teams
         team_list = [playerList[0], playerList[2], playerList[5], playerList[7]]
         self.teams.append(Team(headerParts[5], headerParts[6], team_list))
