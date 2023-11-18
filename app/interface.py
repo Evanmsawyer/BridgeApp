@@ -164,7 +164,7 @@ style.map('TCombobox', fieldbackground=[('readonly', entry_background)])
 custom_font = ('Helvetica', 12)
 
 # Main frame for tabs
-main_frame = ttk.Frame(root, style='TFrame')
+main_frame = ttk.Frame(root,style='TFrame')
 main_frame.pack(fill='both', expand=True)
 
 # Using ttk.Notebook for tabbed views
