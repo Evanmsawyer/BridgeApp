@@ -104,7 +104,8 @@ class Board:
         self.tables.append(Table(self.dealer, bid_info, tricks, self.vuln))
     
     def __str__(self):
-        res = '\"' + pos_dic[self.dealer] + '\",\"' + self.vuln + '\"'
+        sep = '\",\"'
+        res = '\"' + pos_dic[self.dealer] + sep + self.vuln + '\",' + str(self.team1_imps) + ',' + str(self.team2_imps)
         return res
 
 class Table:
@@ -206,12 +207,16 @@ class Table:
         bid_lst = bid_str.split("mb")
         #construct Bid objects
         self.bids = []
+        bidding_opened = False
         for b in bid_lst:
             bid = Bid(dealer, b)
             self.bids.append(bid)
             dealer += 1
             if dealer > 4:
                 dealer = 1
+            if (not bid.is_pass) and not bidding_opened:
+                self.first_bid = bid
+                bidding_opened = True
             if (not bid.is_pass) and bid.doubled == 0:
                 self.last_bid = bid
         #store important bid info
@@ -234,8 +239,9 @@ class Table:
         sep = '\",\"'
         res = '\"'
         for b in self.bids:
-            res += str(b)
-        res += sep + str(self.bids[0]) + sep + str(self.last_bid) + sep + self.result + '\",' + str(self.score)
+            res += str(b) + ','
+        res = res[0:-1]
+        res += sep + str(self.first_bid) + sep + str(self.last_bid) + sep + self.result + '\",' + str(self.score)
         return res
 
 class Trick:
@@ -322,7 +328,7 @@ class Hand:
 class Bid:
     """Object representing a bid at a table"""
     def __str__(self):
-        res = pos_dic[self.declarer]
+        res = pos_dic[self.declarer] + ':'
         if self.is_pass:
             res += "P"
             return res

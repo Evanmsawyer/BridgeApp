@@ -12,7 +12,6 @@ if os.path.isfile("parser_config.json"):
     config = config["parser"]
     r_id = config["r_id"]
     b_id = config["b_id"]
-    h_id = config["h_id"]
     t_id = config["t_id"]
 
 def read_file(filename):
@@ -75,9 +74,6 @@ def read_file(filename):
             round.board_count += 1
         round.score_round()
         return round
-
-def q(x):
-    return "\"" + str(x) + "\""
 
 def write_csv(round: parser_classes.Round):
     global r_id, b_id, t_id
@@ -146,6 +142,10 @@ def main():
         with open(f, mode="w", encoding="UTF-8") as fd:
             for line in l_set:
                 print(line, file=fd, end="")
+    
+    with open("config_parser.json", mode="w", encoding="UTF-8") as f:
+        s = "{\n  \"parser\": {\n    \"r_id\": " + str(r_id) + ",\n    \"b_id\": "+ str(b_id) +",\n    \"t_id\": " + str(t_id) + "\n  }\n}"
+        f.write(s)
 
 if __name__ == "__main__":
     main()
