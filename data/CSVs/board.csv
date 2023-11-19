@@ -1,3 +1,4 @@
+"BoardID", "RoundID", "Dealer", "Vulnerability", "TeamOneImp", "TeamTwoImp"
 34299,2301,"W","O",-1,1
 59357,3891,"W","B",4,-4
 95461,6217,"N","O",15,-15

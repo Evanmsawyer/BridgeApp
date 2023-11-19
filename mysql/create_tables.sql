@@ -1,22 +1,33 @@
+CREATE DATABASE IF NOT EXISTS BridgeDB;
+DROP TABLE IF EXISTS Hands;
+DROP TABLE IF EXISTS PlaysTable;
+DROP TABLE IF EXISTS Trick;
+DROP TABLE IF EXISTS TableEntity;
+DROP TABLE IF EXISTS Board;
+DROP TABLE IF EXISTS Round;
+DROP TABLE IF EXISTS Player;
+DROP TABLE IF EXISTS Team;
 
--- SQL commands to generate the bridge app database tables.
-
--- Creating the Team table
 CREATE TABLE Team (
     Name VARCHAR(255) PRIMARY KEY
 );
-
 -- Creating the Player table
 CREATE TABLE Player (
-    Name VARCHAR(255) PRIMARY KEY,
+    Name VARCHAR(255),
     TeamName VARCHAR(255),
-    FOREIGN KEY (TeamName) REFERENCES Team(Name)
+    FOREIGN KEY (TeamName) REFERENCES Team(Name),
+    PRIMARY KEY(Name, TeamName)
 );
 
--- Creating the Tournament table
---CREATE TABLE Tournament (
---    Name VARCHAR(255) PRIMARY KEY
---);
+-- Creating the Round table
+CREATE TABLE Round (
+    RoundID INT PRIMARY KEY,
+    TournamentName VARCHAR(255),
+    TeamOneName VARCHAR(255),
+    TeamTwoName VARCHAR(255),
+    FOREIGN KEY (TeamOneName) REFERENCES Team(Name),
+    FOREIGN KEY (TeamTwoName) REFERENCES Team(Name)
+);
 
 -- Creating the Board table
 CREATE TABLE Board (
@@ -24,6 +35,8 @@ CREATE TABLE Board (
     RoundID INT,
     Dealer CHAR(1),
     Vulnerability CHAR(1),
+    TeamOneImp INT,
+    TeamTwoImp INT,
     FOREIGN KEY (RoundID) REFERENCES Round(RoundID)
 );
 
@@ -46,20 +59,9 @@ CREATE TABLE PlaysTable (
     TableName INT,
     Seat CHAR(1),
     PlayerName VARCHAR(255),
+    TeamName VARCHAR(255),
     FOREIGN KEY (TableName) REFERENCES TableEntity(TableID),
-    FOREIGN KEY (PlayerName) REFERENCES Player(Name)
-);
-
--- Creating the Round table
-CREATE TABLE Round (
-    RoundID INT PRIMARY KEY,
-    TournamentName VARCHAR(255),
-    TeamOneName VARCHAR(255),
-    TeamTwoName VARCHAR(255),
-    --Date DATE,
-    FOREIGN KEY (TeamOneName) REFERENCES Team(Name),
-    FOREIGN KEY (TeamTwoName) REFERENCES Team(Name),
-    FOREIGN KEY (TournamentName) REFERENCES Tournament(Name)
+    FOREIGN KEY (PlayerName, TeamName) REFERENCES Player(Name, TeamName)
 );
 
 -- Creating the Trick table
@@ -82,5 +84,5 @@ CREATE TABLE Hands (
     Clubs VARCHAR(13),
     HighCardPoints INT,
     SuitDistribution CHAR(4),
-    FOREIGN KEY (BoardID) REFERENCES Baord(BoardID)
+    FOREIGN KEY (BoardID) REFERENCES Board(BoardID)
 );
