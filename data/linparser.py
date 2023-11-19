@@ -5,7 +5,7 @@ import os
 import parser_classes
 import json
 
-r_id = 0; b_id = 0; t_id = 0
+r_id = 0; b_id = 0; t_id = 0; num_read = 1
 if os.path.isfile("parser_config.json"):
     with open("parser_config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
@@ -14,6 +14,11 @@ if os.path.isfile("parser_config.json"):
     b_id = config["b_id"]
     t_id = config["t_id"]
 
+def safe_read(fd):
+    res = fd.readline()
+    if res.startswith("pn"): raise ValueError
+    return res
+
 def read_file(filename):
     if not (os.path.isfile(filename)):
         return
@@ -21,35 +26,39 @@ def read_file(filename):
     with open(filename, mode='r', encoding='utf-8') as fd:
         #read header
         header = fd.readline()
+        if not header.startswith("vg"): raise ValueError
         #split header
         headerParts = header[3:].replace("|", "").replace("\n", "").split(sep=',')
         #get results
         rs = fd.readline()
+        if not rs.startswith("rs"): raise ValueError
         #read players
         player_raw = fd.readline()
+        if not player_raw.startswith("pn"): raise ValueError
         player_list = player_raw.split(sep='|')[1].split(sep=',')
 
         #create round object
         round = parser_classes.Round(headerParts, player_list)
         board_num = round.startBoard
-        curr_line = fd.readline()
-        while not curr_line.startswith("qx"):
-            curr_line = fd.readline()
+        curr_line = safe_read(fd)
+        while not curr_line.startswith("qx") and len(curr_line) > 0:
+            curr_line = safe_read(fd)
         bid_phase = curr_line
 
         while (round.board_count < round.total_boards) and curr_line != '':
             tricks = []
 
             #load first table & create board
-            curr_line = fd.readline()
-            while not curr_line.startswith("pc"):
-                bid_phase += curr_line
-                curr_line = fd.readline()
-            bid_phase = bid_phase.replace("\n", "")
-            while not curr_line.startswith("qx"):
-                if not (curr_line.startswith("nt") or curr_line == "\n"):
-                    tricks += curr_line
-                curr_line = fd.readline()
+            curr_line = safe_read(fd)
+            if not curr_line.startswith("qx"):
+                while not curr_line.startswith("pc") and len(curr_line) > 0:
+                    bid_phase += curr_line
+                    curr_line = safe_read(fd)
+                bid_phase = bid_phase.replace("\n", "")
+                while len(curr_line) > 0 and not curr_line.startswith("qx"):
+                    if not (curr_line.startswith("nt") or curr_line == "\n"):
+                        tricks += curr_line
+                    curr_line = safe_read(fd)
 
             curr_board = parser_classes.Board(board_num, bid_phase, tricks)
             round.boards.append(curr_board)
@@ -57,16 +66,17 @@ def read_file(filename):
             
             #load second table into board
             bid_phase = curr_line
-            while not curr_line.startswith("pc"):
-                bid_phase += curr_line
-                curr_line = fd.readline()
-            bid_phase = bid_phase.replace("\n", "")
-            tricks.clear()
-            curr_line = fd.readline()
-            while len(curr_line) > 0 and not curr_line.startswith("qx"):
-                if not (curr_line.startswith("nt") or curr_line == "\n"):
-                    tricks += curr_line
-                curr_line = fd.readline()
+            if not curr_line.startswith("qx"):
+                while not curr_line.startswith("pc") and len(curr_line) > 0:
+                    bid_phase += curr_line
+                    curr_line = safe_read(fd)
+                bid_phase = bid_phase.replace("\n", "")
+                tricks.clear()
+                curr_line = safe_read(fd)
+                while len(curr_line) > 0 and not curr_line.startswith("qx"):
+                    if not (curr_line.startswith("nt") or curr_line == "\n"):
+                        tricks += curr_line
+                    curr_line = safe_read(fd)
             curr_board.add_table(bid_phase, tricks)
             bid_phase = curr_line
             tricks.clear
@@ -74,6 +84,7 @@ def read_file(filename):
             round.board_count += 1
         round.score_round()
         return round
+    
 
 def write_csv(round: parser_classes.Round):
     global r_id, b_id, t_id
@@ -129,32 +140,43 @@ def write_csv(round: parser_classes.Round):
                 p_string = '\"' + player + '\"'
                 print(p_string, team, sep=',', file=player_csv)
         r_id += 1
+    global num_read
+    print(num_read)
+    num_read += 1
 
 def main():
     #read files in and write to CSVs
+    print("Arguments", sys.argv)
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
             if os.path.isdir(arg):
                 for f in glob.iglob(arg + "*.lin"):
                     try:
+                        print("Starting", f)
                         round = read_file(f)
                         write_csv(round)
                     except Exception as err:
                         print("Error on file " + f + ":", err)
+                    print("Finished", f)
             elif os.path.isfile(arg):
                 try:
+                    print("Starting", arg)
                     round = read_file(arg)
                     write_csv(round)
                 except Exception as err:
                     print("Error on argument " + arg + ":", err)
+                print("Finished", arg)
     else:
         for f in glob.iglob("*.lin"):
+            print("Starting", f)
             try:
                 round = read_file(f)
                 write_csv(round)
             except Exception as err:
                 print("Error on file " + f + ":", err)
+            print("Finished", f)
     #remove duplicates from CSVs
+    print("Removing duplicates")
     try:
         for f in glob.iglob("*.csv"):
             l_set = set()
@@ -166,6 +188,7 @@ def main():
                     print(line, file=fd, end="")
     except Exception as err:
         print("Error removing duplicate tuples from CSVs:", err)
+    print("Done")
     
     with open("config_parser.json", mode="w", encoding="UTF-8") as f:
         s = "{\n  \"parser\": {\n    \"r_id\": " + str(r_id) + ",\n    \"b_id\": "+ str(b_id) +",\n    \"t_id\": " + str(t_id) + "\n  }\n}"
