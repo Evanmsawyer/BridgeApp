@@ -23,27 +23,27 @@ CREATE TABLE Board (
     BoardID INT PRIMARY KEY,
     RoundID INT,
     Dealer CHAR(1),
-    Vulnerability VARCHAR(255)
-    FOREIGN KEY (RoundID) REFERENCES Round(RoundID),
+    Vulnerability CHAR(1),
+    FOREIGN KEY (RoundID) REFERENCES Round(RoundID)
 );
 
 -- Creating the Table table
 CREATE TABLE TableEntity (
     TableID INT PRIMARY KEY,
-    PairedTableName VARCHAR(255),
+    PairedTableID INT,
     BoardID INT,
     BidPhase TEXT,
-    FirstBid VARCHAR(255),
-    LastBid VARCHAR(255),
-    Result VARCHAR(255),
+    FirstBid VARCHAR(10),
+    LastBid VARCHAR(10),
+    Result VARCHAR(10),
     RawScore INT,
-    FOREIGN KEY (PairedTableName) REFERENCES TableEntity(TableID),
+    FOREIGN KEY (PairedTableID) REFERENCES TableEntity(TableID),
     FOREIGN KEY (BoardID) REFERENCES Board(BoardID)
 );
 
 -- Creating the PlaysTable table
 CREATE TABLE PlaysTable (
-    TableName VARCHAR(255),
+    TableName INT,
     Seat CHAR(1),
     PlayerName VARCHAR(255),
     FOREIGN KEY (TableName) REFERENCES TableEntity(TableID),
@@ -65,21 +65,22 @@ CREATE TABLE Round (
 -- Creating the Trick table
 CREATE TABLE Trick (
     TrickNumber INT,
-    TableName VARCHAR(255),
+    TableID INT,
     FirstSeat CHAR(1),
     WinningSeat CHAR(1),
-    Play TEXT
-    FOREIGN KEY (TableName) REFERENCES TableEntity(TableID),
+    Play CHAR(8),
+    FOREIGN KEY (TableID) REFERENCES TableEntity(TableID)
 );
 
 -- Creating the Hands table
 CREATE TABLE Hands (
-    Position TEXT,
-    Spades TEXT,
-    Hearts TEXT,
-    Diamonds TEXT,
-    Clubs TEXT,
+    BoardID INT,
+    Position CHAR(1),
+    Spades VARCHAR(13),
+    Hearts VARCHAR(13),
+    Diamonds VARCHAR(13),
+    Clubs VARCHAR(13),
     HighCardPoints INT,
-    SuitDistribution TEXT,
-    Vulnerability VARCHAR(255)
+    SuitDistribution CHAR(4),
+    FOREIGN KEY (BoardID) REFERENCES Baord(BoardID)
 );

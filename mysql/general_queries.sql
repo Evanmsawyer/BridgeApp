@@ -5,7 +5,7 @@ SELECT * FROM Board WHERE BoardID = [INPUT];
 SELECT Dealer FROM Board WHERE BoardID = [INPUT];
 
 --Seat
-SELECT Seat FROM PlaysTable WHERE TableName = [INPUT];
+SELECT Seat FROM PlaysTable WHERE TableID = [INPUT];
 
 --Vulnerability
 SELECT * FROM Hands WHERE Vulnerability = [Your Vulnerability Type];
@@ -53,7 +53,7 @@ WHERE TableEntity.LastBid IN ('6', '7') AND TableEntity.Result = 'Made';
 --List of boards where the same contract bid in both rooms but one team made it and the other did not
 SELECT b1.BoardID
 FROM TableEntity t1
-JOIN TableEntity t2 ON t1.PairedTableName = t2.TableID
+JOIN TableEntity t2 ON t1.PairedTableID = t2.TableID
 JOIN Board b1 ON t1.BoardID = b1.BoardID
 JOIN Board b2 ON t2.BoardID = b2.BoardID
 WHERE t1.LastBid = t2.LastBid AND t1.Result != t2.Result;
@@ -61,11 +61,11 @@ WHERE t1.LastBid = t2.LastBid AND t1.Result != t2.Result;
 --List of boars where the same contract bid in both rooms with different results and different opening lead
 SELECT b1.BoardID
 FROM TableEntity t1
-JOIN TableEntity t2 ON t1.PairedTableName = t2.TableID
+JOIN TableEntity t2 ON t1.PairedTableID = t2.TableID
 JOIN Board b1 ON t1.BoardID = b1.BoardID
 JOIN Board b2 ON t2.BoardID = b2.BoardID
-JOIN Trick tr1 ON t1.TableID = tr1.TableName
-JOIN Trick tr2 ON t2.TableID = tr2.TableName
+JOIN Trick tr1 ON t1.TableID = tr1.TableID
+JOIN Trick tr2 ON t2.TableID = tr2.TableID
 WHERE t1.LastBid = t2.LastBid AND t1.Result != t2.Result AND tr1.FirstSeat != tr2.FirstSeat;
 
 --List boards where any hand had no cards of a given suit
@@ -78,7 +78,7 @@ WHERE (Hearts = '' OR Spades = '' OR Diamonds = '' OR Clubs = '');
 SELECT Board.BoardID
 FROM Board
 JOIN TableEntity ON Board.BoardID = TableEntity.BoardID
-JOIN PlaysTable ON TableEntity.TableID = PlaysTable.TableName
+JOIN PlaysTable ON TableEntity.TableID = PlaysTable.TableID
 JOIN Player ON PlaysTable.PlayerName = Player.Name
 WHERE TableEntity.RawScore >= 400 AND Player.HighCardPoints < 25;
 
