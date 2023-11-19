@@ -83,8 +83,7 @@ def read_file(filename):
             curr_board.score_board()
             round.board_count += 1
         round.score_round()
-        return round
-    
+        return round  
 
 def write_csv(round: parser_classes.Round):
     global r_id, b_id, t_id
