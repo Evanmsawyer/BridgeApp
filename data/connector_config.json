@@ -1,0 +1,8 @@
+{
+    "mysql": {
+        "host": "24.31.144.108",
+        "user": "mark",
+        "passwd": "password",
+        "db": "bridgedb"
+    }
+}
