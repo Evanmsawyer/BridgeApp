@@ -54,13 +54,13 @@ CREATE TABLE TableEntity (
     FOREIGN KEY (BoardID) REFERENCES Board(BoardID)
 );
 
--- Creating the PlaysTable table
+-- Creating the PlaysTable table, delay constraint checking for TableName 
 CREATE TABLE PlaysTable (
-    TableName INT,
+    TableID INT,
     Seat CHAR(1),
     PlayerName VARCHAR(255),
     TeamName VARCHAR(255),
-    FOREIGN KEY (TableName) REFERENCES TableEntity(TableID),
+    FOREIGN KEY (TableID) REFERENCES TableEntity(TableID),
     FOREIGN KEY (PlayerName, TeamName) REFERENCES Player(Name, TeamName)
 );
 
@@ -84,5 +84,6 @@ CREATE TABLE Hands (
     Clubs VARCHAR(13),
     HighCardPoints INT,
     SuitDistribution CHAR(4),
+    PRIMARY KEY(Position, BoardID)
     FOREIGN KEY (BoardID) REFERENCES Board(BoardID)
 );

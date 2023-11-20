@@ -1,0 +1,6 @@
+SET DELIMITER $$
+CREATE PROCEDURE TeamSearch(@TeamNameInput VARCHAR(255)) 
+AS BEGIN
+    SELECT * FROM bridgedb.Team WHERE Name = @TeamNameInput;
+END$$
+SET DELIMITER ;
