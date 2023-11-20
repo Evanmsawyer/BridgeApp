@@ -84,6 +84,12 @@ NATURAL JOIN (SELECT * FROM bridgedb.TableEntity WHERE TableEntity.RawScore >= 4
 WHERE ((Team_HCP.Position = 'N' AND SUBSTRING(t1.LastBid, 1, 1) IN ('S', 'N'))
     OR (Team_HCP.Position = 'E' AND SUBSTRING(t1.LastBid, 1, 1) IN ('E', 'W')));
 
+--List all tricks in order for a specific table
+SELECT *
+FROM bridgedb.trick
+WHERE trick.TableID = [Your Table ID]
+ORDER BY trick.TrickNumber ASC
+
 --TOD:
 --List boards with a successful sacrifice
 --Number of Bids
