@@ -99,10 +99,8 @@ def write_csv(round: parser_classes.Round):
         for board in round.boards:
             print(b_id, r_id, board, file=board_csv, sep=",")
             #write to hand.csv (hand_id, board_id, position, spades, hearts, diamonds, clubs, hcp)
-            h_id = 1
             for hand in board.hands:
-                print(h_id, b_id, hand, file=hand_csv, sep=",")
-                h_id += 1
+                print(b_id, hand, file=hand_csv, sep=",")
 
             #write to table.csv (table_id, board_id, paired_id, bid_phase, last_bid, result, declarer_score)
             table_1 = board.tables[0]
