@@ -32,6 +32,6 @@ was first executed.
 
 The following Python packages are required for crawler.py: requests, urllib, bs4, and os. Of these packages, requests and bs4 do not come with a default
 Python installation. If you do not have these packages, run the following command:
-`pip install beautifulsoup4 requests`
+`pip install beautifulsoup4 requests`.
 linparser.py requires the following Python packages: glob, sys, os, json, and bisect. All of these packages should be installed by default so no action is
 nessecary to execute linparser.py correctly.
