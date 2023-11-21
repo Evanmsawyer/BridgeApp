@@ -76,6 +76,7 @@ CREATE TABLE Trick (
 
 -- Creating the Hands table
 CREATE TABLE Hands (
+    HandID INT,
     BoardID INT,
     Position CHAR(1),
     Spades VARCHAR(13),
