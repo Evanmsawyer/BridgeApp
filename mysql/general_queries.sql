@@ -100,7 +100,7 @@ WHERE trick.TableID = [INPUT]
 ORDER BY trick.TrickNumber ASC
 
 --List all tables where a trump card was played in each trick
---Incomplete, probably don't submit this
+--Incomplete, probably don't submit
 WITH trump(TableID, suit) AS
     (SELECT TableID, SUBSTRING(t1.LastBid, 4, 1)
     FROM bridgedb.tableentity AS t1)
