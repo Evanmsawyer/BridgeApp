@@ -58,3 +58,26 @@ def execute_query(query, connection, parameters=(), auto_commit=True):
             return cursor
     except Error as e:
         print(f"The error '{e}' occurred")
+
+def execute_stored_procedure(procedure_name, connection, parameters=()):
+    """
+    Executes a stored proedure
+
+    Args:
+        procedure_name (str): The filename for the stored procedure 
+        parameters (tuple, optional): The parameters to be passed to the store procedure. Defaults to ().
+        connection (mysql.connector.connection_cext.CMySQLConnection): The connection to the database
+    Returns:
+        cursor: mysql.connector.cursor_cext.CMySQLCursor object        
+    Raises:
+        Error: If the store procedure cannot be executed
+    """
+    cursor = connection.cursor()
+    try:
+        cursor.callproc(procedure_name, parameters)
+        connection.commit()
+        print("Store procedure executed successfully")
+    except Error as e:
+        print(f"The error '{e}' occurred")
+
+
