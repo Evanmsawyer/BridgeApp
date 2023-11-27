@@ -59,6 +59,8 @@ def read_file(filename):
         # check that number of boards and tables are valid
         else: raise Exception("invalid number of tables")
         if round.total_boards != len(round.boards): raise Exception("invalid number of boards")
+        # score all boards
+        for board in round.boards: board.score_board()
         return round
 
 def write_csv(round: parser_classes.Round):
