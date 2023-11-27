@@ -1,5 +1,5 @@
 from bisect import bisect
-#Contains classes for the linparser.py script
+#rewrite of original parser_classes.py
 #global dictionary for dealer position
 pos_dic = {
    -1 : "",
@@ -32,26 +32,24 @@ class Round:
             if b.team1_imps > 0:    team1.endScore += b.team1_imps
             else:                   team2.endScore += b.team2_imps
 
-    def __init__(self, headerParts, playerList):
-        self.tournament_name = headerParts[0]
-        self.segment = headerParts[1]
-        if headerParts[2] == "I":
+    def __init__(self, header, players):
+        header = header.split(",")
+        self.tournament_name = header[0]
+        self.segment = header[1]
+        if header[2] == "I":
             self.scoreType = "IMPS"
         else:
-            self.scoreType = None
-        self.startBoard = int(headerParts[3])
-        self.endBoard = int(headerParts[4])
+            raise Exception("invalid header syntax")
         self.teams = []
-        self.player_list = playerList
+        players = players.split(",")
         #build player list for teams
-        team_list = [playerList[0], playerList[2], playerList[5], playerList[7]]
-        self.teams.append(Team(headerParts[5], headerParts[6], team_list))
-        team_list = [playerList[1], playerList[3], playerList[4], playerList[6]]
-        self.teams.append(Team(headerParts[7], headerParts[8], team_list))
+        team_list = [players[0], players[2], players[5], players[7]]
+        self.teams.append(Team(header[5], header[6], team_list))
+        team_list = [players[1], players[3], players[4], players[6]]
+        self.teams.append(Team(header[7], header[8], team_list))
         #initialize board array
-        self.total_boards = self.endBoard - self.startBoard + 1
+        self.total_boards = int(header[4]) - int(header[3]) + 1
         self.boards = []
-        self.board_count = 0
     
     def __str__(self):
         res = '\"' + self.tournament_name + '\",\"' + self.teams[0].team_name + '\",\"' + self.teams[1].team_name + '\"'

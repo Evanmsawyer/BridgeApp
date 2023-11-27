@@ -16,18 +16,49 @@ if os.path.isfile("parser_config.json"):
 
 
 def read_file(filename):
-    if not (os.path.isfile(filename)): raise ValueError
-    #open file
+    if not (os.path.isfile(filename)): raise Exception("invalid path")
+    # open file
     with open(filename, mode='r', encoding='utf-8') as fd:
-        #Load in all lines
+        # load in all lines
         file = ""
         for line in fd:
             file += line
         file = file.replace("\n", "")
         file = file.split("|")
-        if file[0] != "vg": raise RuntimeError
+        # get header
+        if file[0] != "vg": raise Exception("invalid header syntax")
         header = file[1]
-
+        # get players
+        try: players = file[file.index["pn"] + 1]
+        except ValueError: raise Exception("cannot find player list")
+        # construct round object
+        round = parser_classes.Round(header, players)
+        # "seek" to first instance of "qx"
+        file = file[file.index("qx"):]
+        board = None
+        # loop through file
+        while True:
+            # check if this is the last bid phase, break if true
+            try: i = file.index("qx")
+            except ValueError: break
+            # create board if it doesn't exist
+            if board is None:
+                board = parser_classes.Board(file[0:i])
+                round.boards += board
+            # add second table to board, then score board and set to None
+            else:
+                board.add_table(file[0:i])
+                board.score_board()
+                board = None
+            # "seek" to next instance of "qx"
+            file = file[i:]
+        # add final table to final board
+        if board is not None:
+            board.add_table(file[0:])
+        # check that number of boards and tables are valid
+        else: raise Exception("invalid number of tables")
+        if round.total_boards != len(round.boards): raise Exception("invalid number of boards")
+        return round
 
 def write_csv(round: parser_classes.Round):
     global r_id, b_id, t_id
