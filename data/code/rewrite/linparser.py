@@ -1,4 +1,5 @@
-#Update of linparser that ignores newlines and uses a new parsing method
+# update of linparser that ignores newlines and uses a new parsing method
+# TODO: rewrite write_csv method, rewrite error catch in main
 import glob
 import sys
 import os
@@ -43,18 +44,18 @@ def read_file(filename):
             except ValueError: break
             # create board if it doesn't exist
             if board is None:
-                board = parser_classes.Board(file[0:i])
+                board = parser_classes.Board(file[:i])
                 round.boards += board
             # add second table to board, then score board and set to None
             else:
-                board.add_table(file[0:i])
+                board.add_table(file[:i])
                 board.score_board()
                 board = None
             # "seek" to next instance of "qx"
             file = file[i:]
         # add final table to final board
         if board is not None:
-            board.add_table(file[0:])
+            board.add_table(file)
         # check that number of boards and tables are valid
         else: raise Exception("invalid number of tables")
         if round.total_boards != len(round.boards): raise Exception("invalid number of boards")
