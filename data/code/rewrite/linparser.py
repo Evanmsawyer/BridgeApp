@@ -63,8 +63,45 @@ def read_file(filename):
         for board in round.boards: board.score_board()
         return round
 
+def write_headers():
+    # creates headers for csv files if they don't exist already
+    # round.csv
+    if not os.path.isfile("round.csv"):
+        with open("round.csv", "w", encoding="UTF-8") as f:
+            print("\"Round ID\",\"Tournament Name\",\"Team One\",\"Team Two\"", file=f)
+    # board.csv
+    if not os.path.isfile("board.csv"):
+        with open("board.csv", "w", encoding="UTF-8") as f:
+            print("\"Board ID\",\"Round ID\",\"Dealer\",\"Vulnerability\",\"Team One IMPs\",\"Team Two IMPs\"", file=f)
+    # table.csv
+    if not os.path.isfile("table.csv"):
+        with open("table.csv", "w", encoding="UTF-8") as f:
+            print("\"Table ID\",\"Paired ID\",\"Board ID\",\"Bid Phase\",\"First Bid\",\"Last Bid\",\"Result\",\"Raw Score\"", file=f)
+    # hand.csv
+    if not os.path.isfile("hand.csv"):
+        with open("hand.csv", "w", encoding="UTF-8") as f:
+            print("\"Board ID\",\"Position\",\"Spades\",\"Hearts\",\"Diamonds\",\"Clubs\",\"High Card Points\"", file=f)
+    # trick.csv
+    if not os.path.isfile("trick.csv"):
+        with open("trick.csv", "w", encoding="UTF-8") as f:
+            print("\"Trick Number\",\"Table ID\",\"First Seat\",\"Winning Seat\",\"Play\"", file=f)
+    # team.csv
+    if not os.path.isfile("team.csv"):
+        with open("team.csv", "w", encoding="UTF-8") as f:
+            print("\"Team Name\"", file=f)
+    # player.csv
+    if not os.path.isfile("player.csv"):
+        with open("player.csv", "w", encoding="UTF-8") as f:
+            print("\"Player Name\",\"Team Name\"", file=f)
+    # plays_table.csv
+    if not os.path.isfile("plays_table.csv"):
+        with open("plays_table.csv", "w", encoding="UTF-8") as f:
+            print("\"Table ID\",\"Seat\",\"Player Name\",\"Team Name\"", file=f)
+
 def write_csv(round: parser_classes.Round):
     global r_id, b_id, t_id
+    # write headers to file (if they don't exist)
+    write_headers()
     # open files
     with (open("round.csv", "a", encoding="UTF-8") as round_csv, open("board.csv", "a", encoding="UTF-8") as board_csv,
           open("table.csv", "a", encoding="UTF-8") as table_csv, open("hand.csv", "a", encoding="UTF-8") as hand_csv,
@@ -86,7 +123,7 @@ def write_csv(round: parser_classes.Round):
             print(t_id, (t_id + 1), b_id, table_1, file=table_csv, sep=",")
             print((t_id + 1), t_id, b_id, table_2, file=table_csv, sep=",")
 
-            #write to trick.csv (num, t_id, play, start_pos)
+            # write to trick.csv (num, t_id, play, start_pos)
             for trick in table_1.tricks:
                 print(trick.num, t_id, trick, file=trick_csv, sep=",")
             for trick in table_2.tricks:

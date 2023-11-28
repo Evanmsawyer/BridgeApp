@@ -35,7 +35,7 @@ CREATE TABLE Round (
 CREATE TABLE Board (
     BoardID INT PRIMARY KEY,
     RoundID INT,
-    Dealer CHAR(1),
+    Dealer INT,
     Vulnerability CHAR(1),
     TeamOneImp INT,
     TeamTwoImp INT,

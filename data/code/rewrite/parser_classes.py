@@ -2,7 +2,7 @@ from bisect import bisect
 # rewrite of original parser_classes.py
 # global dictionary for dealer position
 
-# TODO: finish "passed out" logic (bid printing, last bid, first bid, contract level, result)
+# TODO: 
 
 pos_dic = {
    -1 : "",
@@ -114,6 +114,7 @@ class Table:
     """Object representing one table of one board of a Bridge tournament"""
     def count_tricks(self):
         self.tricks_taken = 0
+        if not self.bidding_opened: return
         for t in self.tricks:
             # if two positions are on the same team, they are either both even (E/W) or both odd (N/S)
             if self.declarer % 2 == t.winner % 2:
@@ -241,24 +242,33 @@ class Table:
             j = info.index("pg")
         except ValueError: raise Exception("cannot find bid data")
         self.parse_bids(info[i + 1: j])
-        # construct trick list
-        self.add_tricks(info[j + 2: ])
-        # store results of table
-        if self.tricks_taken == self.contract_level + 6:
-            self.result = self.result + "="
-        elif self.tricks_taken > self.contract_level + 6:
-            self.result = self.result + "+" + str(self.tricks_taken - (self.contract_level + 6))
-        else:
-            self.result = self.result + "-" + str((self.contract_level + 6) - self.tricks_taken)
+        # if the bid was passed out, there were no tricks or contract
+        if self.bidding_opened:
+            # construct trick list
+            self.add_tricks(info[j + 2: ])
+            # store results of table
+            if self.tricks_taken == self.contract_level + 6:
+                self.result = self.result + "="
+            elif self.tricks_taken > self.contract_level + 6:
+                self.result = self.result + "+" + str(self.tricks_taken - (self.contract_level + 6))
+            else:
+                self.result = self.result + "-" + str((self.contract_level + 6) - self.tricks_taken)
         self.get_score()
 
     def __str__(self):
         sep = '\",\"'
         res = '\"'
+        # append all bids
         for b in self.bids:
             res += str(b) + ','
+        # drop trailing comma
         res = res[0:-1]
-        res += sep + str(self.first_bid) + sep + str(self.last_bid) + sep + self.result + '\",' + str(self.score)
+        if self.bidding_opened:
+            res += sep + str(self.first_bid) + sep + str(self.last_bid) + sep + self.result + '\",' + str(self.score)
+        else:
+            # if bidding was not opened, set first bid, last bid, and result to null
+            # score is always zero if bidding was not opened
+            res += '\",,,,0'
         return res
 
 class Trick:
