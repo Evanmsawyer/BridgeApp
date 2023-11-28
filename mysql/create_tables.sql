@@ -79,7 +79,7 @@ CREATE TABLE Trick (
 -- Creating the Hands table
 CREATE TABLE Hands (
     BoardID INT,
-    Position CHAR(1),
+    Position INT,
     Spades VARCHAR(13),
     Hearts VARCHAR(13),
     Diamonds VARCHAR(13),
