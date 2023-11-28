@@ -1,5 +1,5 @@
 # update of linparser that ignores newlines and uses a new parsing method
-# TODO: rewrite write_csv method, rewrite error catch in main
+# TODO: rewrite error catch in main
 import glob
 import sys
 import os
@@ -65,51 +65,50 @@ def read_file(filename):
 
 def write_csv(round: parser_classes.Round):
     global r_id, b_id, t_id
-    #open files
+    # open files
     with (open("round.csv", "a", encoding="UTF-8") as round_csv, open("board.csv", "a", encoding="UTF-8") as board_csv,
           open("table.csv", "a", encoding="UTF-8") as table_csv, open("hand.csv", "a", encoding="UTF-8") as hand_csv,
           open("trick.csv", "a", encoding="UTF-8") as trick_csv, open("team.csv", "a", encoding="UTF-8") as team_csv,
           open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as plays_csv):
-        #write to round.csv (round_id, tournament_name, team_one_name, team_two_name)
+        # write to round.csv (round_id, tournament_name, team_one_name, team_two_name)
         print(r_id, round, file=round_csv, sep=",")
 
-        #write to board.csv (board_id, round_id, dealer, vuln)
+        # write to board.csv (board_id, round_id, dealer, vuln, team_one_imps, team_two_imps)
         for board in round.boards:
             print(b_id, r_id, board, file=board_csv, sep=",")
-            #write to hand.csv (hand_id, board_id, position, spades, hearts, diamonds, clubs, hcp)
+            # write to hand.csv (board_id, position, spades, hearts, diamonds, clubs, hcp)
             for hand in board.hands:
                 print(b_id, hand, file=hand_csv, sep=",")
 
-            #write to table.csv (table_id, board_id, paired_id, bid_phase, last_bid, result, declarer_score)
+            # write to table.csv (table_id, paired_id, board_id, bid_phase, first_bid, last_bid, result, declarer_score)
             table_1 = board.tables[0]
             table_2 = board.tables[1]
             print(t_id, (t_id + 1), b_id, table_1, file=table_csv, sep=",")
             print((t_id + 1), t_id, b_id, table_2, file=table_csv, sep=",")
 
-            #write to trick (num, t_id, play, start_pos)
+            #write to trick.csv (num, t_id, play, start_pos)
             for trick in table_1.tricks:
                 print(trick.num, t_id, trick, file=trick_csv, sep=",")
             for trick in table_2.tricks:
                 print(trick.num, (t_id + 1), trick, file=trick_csv, sep=",")
             
-            #write to plays_table.csv
+            # write to plays_table.csv (table_id, seat, player_name, team_name)
             for player in round.player_list:
                 i = round.player_list.index(player)
                 team = round.teams[0] if player in round.teams[0].members else round.teams[1]
-                pos = '\"' + parser_classes.pos_dic[(i % 4) + 1] + '\"'
+                pos = str((i % 4) + 1)
                 name = '\"' + player + '\"'
                 if(i > 3):
                     print((t_id + 1), pos, name, team, sep=",", file=plays_csv)
                 else:
                     print(t_id, pos, name, team, sep=",", file=plays_csv)
-                    
             b_id += 1
             t_id += 2
             
-        #write to team.csv
+        # write to team.csv (team_name)
         for team in round.teams:
             print(team, file=team_csv)
-            #write to player.csv
+            # write to player.csv (player_name, team_name)
             for player in team.members:
                 p_string = '\"' + player + '\"'
                 print(p_string, team, sep=',', file=player_csv)

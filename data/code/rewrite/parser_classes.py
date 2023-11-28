@@ -2,7 +2,7 @@ from bisect import bisect
 # rewrite of original parser_classes.py
 # global dictionary for dealer position
 
-# TODO: review __str__() methods
+# TODO: finish "passed out" logic (bid printing, last bid, first bid, contract level, result)
 
 pos_dic = {
    -1 : "",
@@ -45,6 +45,7 @@ class Round:
             raise Exception("invalid header syntax")
         self.teams = []
         players = players.split(",")
+        self.player_list = players
         # build player list for teams
         team_list = [players[0], players[2], players[5], players[7]]
         self.teams.append(Team(header[5], header[6], team_list))
@@ -61,17 +62,19 @@ class Round:
 class Board:
     """Object representing one board of a round in a Bridge tournament"""
     def score_board(self):
-        table1 = self.tables[0]
-        table2 = self.tables[1]
+        try:
+            table1 = self.tables[0]
+            table2 = self.tables[1]
+        except IndexError:
+            raise Exception("invalid number of tables for board")
         team1_raw = table1.score if table1.declarer % 2 == 1 else -table1.score
         team2_raw = table2.score if table2.declarer % 2 == 1 else -table2.score
         imp_score = bisect(imp_calc, abs(team1_raw - team2_raw))
         self.team1_imps = imp_score if team1_raw > team2_raw else -imp_score
         self.team2_imps = -self.team1_imps
 
-    def add_table(self, bid_info, tricks):
-        bid_info = bid_info.split('|')
-        self.tables.append(Table(self.dealer, bid_info, tricks, self.vuln))
+    def add_table(self, info):
+        self.tables += Table(self.dealer, info, self.vuln)
 
     def add_hands(self, hand_data):
         hand_list = hand_data.split(',')
@@ -104,8 +107,7 @@ class Board:
         self.tables = [Table(self.dealer, info, self.vuln)]
     
     def __str__(self):
-        sep = '\",\"'
-        res = '\"' + pos_dic[self.dealer] + sep + self.vuln + '\",' + str(self.team1_imps) + ',' + str(self.team2_imps)
+        res = str(self.dealer) + "\"," + self.vuln + '\",' + str(self.team1_imps) + ',' + str(self.team2_imps)
         return res
 
 class Table:
@@ -220,11 +222,15 @@ class Table:
         self.status = self.bids[-4].doubled
         self.suit = self.last_bid.suit
         # get declarer
-        for b in self.bids:
-            if b.suit == self.suit and b.declarer % 2 == self.last_bid.declarer % 2:
-                self.declarer = b.declarer
-        self.contract_level = self.last_bid.value
-        self.result = str(self.contract_level) + self.suit
+        if self.bidding_opened:
+            for b in self.bids:
+                if b.suit == self.suit and b.declarer % 2 == self.last_bid.declarer % 2:
+                    self.declarer = b.declarer
+            self.contract_level = self.last_bid.value
+            self.result = str(self.contract_level) + self.suit
+        else:
+            self.last_bid = None
+            self.first_bid = None
 
     def __init__(self, info, vuln):
         # set vulnerability
@@ -261,8 +267,7 @@ class Trick:
     rank_lst = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
 
     def __str__(self):
-        sep = '\",\"'
-        res = '\"' + pos_dic[self.leader] + sep + pos_dic[self.winner] + sep
+        res = self.leader + "," + self.winner + ",\""
         for card in self.cards:
             res += card
         res += '\"'
@@ -334,8 +339,8 @@ class Hand:
     
     def __str__(self):
         sep = '\",\"'
-        res = ('\"' + pos_dic[self.position] + sep + self.suits[0] + sep + self.suits[1] + 
-               sep + self.suits[2] + sep + self.suits[3] + '\",' + str(self.hcp) + ',\"' + str(self.dist) + '\"')
+        res = (self.position + ",\"" + self.suits[0] + sep + self.suits[1] + 
+               sep + self.suits[2] + sep + self.suits[3] + '\",' + str(self.hcp))
         return res
 
 class Bid:
