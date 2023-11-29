@@ -59,7 +59,7 @@ def execute_query(query, connection, parameters=(), auto_commit=True):
     except Error as e:
         print(f"The error '{e}' occurred")
 
-def execute_stored_procedure(procedure_name, connection, parameters=()):
+def execute_stored_procedure(procedure_name, connection, parameters=(), auto_commit=True):
     """
     Executes a stored proedure
 
@@ -75,9 +75,17 @@ def execute_stored_procedure(procedure_name, connection, parameters=()):
     cursor = connection.cursor()
     try:
         cursor.callproc(procedure_name, parameters)
-        connection.commit()
-        print("Store procedure executed successfully")
+        if auto_commit:
+            connection.commit()
+            print("Store procedure executed successfully")
+        else:
+            return cursor
     except Error as e:
         print(f"The error '{e}' occurred")
 
+
+# BEGIN TEST SCRIPT
+connection = create_connection()
+# print connection info
+print(connection)
 
