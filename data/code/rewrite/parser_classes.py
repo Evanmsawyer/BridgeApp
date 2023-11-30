@@ -74,7 +74,7 @@ class Board:
         self.team2_imps = -self.team1_imps
 
     def add_table(self, info):
-        self.tables += Table(self.dealer, info, self.vuln)
+        self.tables += [Table(self.dealer, info, self.vuln)]
 
     def add_hands(self, hand_data):
         hand_list = hand_data.split(',')
@@ -131,9 +131,11 @@ class Table:
                 case "pc": continue
                 # end of trick
                 case "pg":
+                    if trick_str == "":
+                        continue
                     t = Trick(leader, self.suit, len(self.tricks) + 1, trick_str)
-                    leader = t.winner
-                    self.tricks += t
+                    if not t.claimed: leader = t.winner
+                    self.tricks += [t]
                     trick_str = ""
                 # end of play
                 case "mc":
@@ -143,7 +145,7 @@ class Table:
         if has_claim:
             # add last trick if not empty
             if not trick_str == "":
-                self.tricks += Trick(leader, self.suit, len(self.tricks) + 1, trick_str)
+                self.tricks += [Trick(leader, self.suit, len(self.tricks) + 1, trick_str)]
             self.tricks_taken = int(trick_data[trick_data.index("mc") + 1])    
         else:
             self.count_tricks()
@@ -210,13 +212,15 @@ class Table:
             # marker for next bid is "mb"
             if token == "mb":
                 bid = Bid(dealer, bid_str)
-                self.bids += bid
-                if not bid.is_pass:
+                self.bids += [bid]
+                if not bid.is_pass and bid.doubled == 0:
                     if not self.bidding_opened:
                         self.bidding_opened = True
                         self.first_bid = bid
                     self.last_bid = bid
+                # increment dealer and reset bid string
                 dealer = (dealer % 4) + 1
+                bid_str = ""
             else:
                 bid_str += token
         # store important bid info
@@ -233,7 +237,9 @@ class Table:
             self.last_bid = None
             self.first_bid = None
 
-    def __init__(self, info, vuln):
+    def __init__(self, dealer, info, vuln):
+        # set dealer
+        self.dealer = dealer
         # set vulnerability
         self.vuln = vuln
         # construct bid list

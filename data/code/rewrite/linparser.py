@@ -30,7 +30,7 @@ def read_file(filename):
         if file[0] != "vg": raise Exception("invalid header syntax")
         header = file[1]
         # get players
-        try: players = file[file.index["pn"] + 1]
+        try: players = file[(file.index("pn") + 1)]
         except ValueError: raise Exception("cannot find player list")
         # construct round object
         round = parser_classes.Round(header, players)
@@ -40,12 +40,12 @@ def read_file(filename):
         # loop through file
         while True:
             # check if this is the last bid phase, break if true
-            try: i = file.index("qx")
+            try: i = file.index("qx", 1)
             except ValueError: break
             # create board if it doesn't exist
             if board is None:
                 board = parser_classes.Board(file[:i])
-                round.boards += board
+                round.boards += [board]
             # add second table to board, then score board and set to None
             else:
                 board.add_table(file[:i])
@@ -155,10 +155,11 @@ def write_csv(round: parser_classes.Round):
     num_read += 1
 
 def main():
-    #read files in and write to CSVs
-    print("Arguments", sys.argv)
+    # read files in and write to CSVs
+    # if parse arguments, if given
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
+            # if the argument is a directory, search the directory
             if os.path.isdir(arg):
                 for f in glob.iglob(arg + "*.lin"):
                     try:
@@ -168,6 +169,7 @@ def main():
                     except Exception as err:
                         print("Error on file " + f + ":", err)
                     print("Finished", f)
+            #if the argument is a file, read it as a .lin file
             elif os.path.isfile(arg):
                 try:
                     print("Starting", arg)
@@ -176,6 +178,7 @@ def main():
                 except Exception as err:
                     print("Error on argument " + arg + ":", err)
                 print("Finished", arg)
+    # if no arguments were given, look for files in working directory
     else:
         for f in glob.iglob("*.lin"):
             print("Starting", f)
@@ -185,7 +188,7 @@ def main():
             except Exception as err:
                 print("Error on file " + f + ":", err)
             print("Finished", f)
-    #remove duplicates from CSVs
+    # remove duplicates from CSVs
     print("Removing duplicates")
     try:
         for f in glob.iglob("*.csv"):
