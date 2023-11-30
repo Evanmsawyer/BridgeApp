@@ -1,5 +1,5 @@
 # update of linparser that ignores newlines and uses a new parsing method
-# TODO: rewrite error catch in main
+# TODO: ISSUE: if a failure occurs during a write to CSVs, we get inconsistent information
 import glob
 import sys
 import os
@@ -63,50 +63,41 @@ def read_file(filename):
         for board in round.boards: board.score_board()
         return round
 
-def write_headers():
-    # creates headers for csv files if they don't exist already
-    # round.csv
-    if not os.path.isfile("round.csv"):
-        with open("round.csv", "w", encoding="UTF-8") as f:
-            print("\"Round ID\",\"Tournament Name\",\"Team One\",\"Team Two\"", file=f)
-    # board.csv
-    if not os.path.isfile("board.csv"):
-        with open("board.csv", "w", encoding="UTF-8") as f:
-            print("\"Board ID\",\"Round ID\",\"Dealer\",\"Vulnerability\",\"Team One IMPs\",\"Team Two IMPs\"", file=f)
-    # table.csv
-    if not os.path.isfile("table.csv"):
-        with open("table.csv", "w", encoding="UTF-8") as f:
-            print("\"Table ID\",\"Paired ID\",\"Board ID\",\"Bid Phase\",\"First Bid\",\"Last Bid\",\"Result\",\"Raw Score\"", file=f)
-    # hand.csv
-    if not os.path.isfile("hand.csv"):
-        with open("hand.csv", "w", encoding="UTF-8") as f:
-            print("\"Board ID\",\"Position\",\"Spades\",\"Hearts\",\"Diamonds\",\"Clubs\",\"High Card Points\"", file=f)
-    # trick.csv
-    if not os.path.isfile("trick.csv"):
-        with open("trick.csv", "w", encoding="UTF-8") as f:
-            print("\"Trick Number\",\"Table ID\",\"First Seat\",\"Winning Seat\",\"Play\"", file=f)
-    # team.csv
-    if not os.path.isfile("team.csv"):
-        with open("team.csv", "w", encoding="UTF-8") as f:
-            print("\"Team Name\"", file=f)
-    # player.csv
-    if not os.path.isfile("player.csv"):
-        with open("player.csv", "w", encoding="UTF-8") as f:
-            print("\"Player Name\",\"Team Name\"", file=f)
-    # plays_table.csv
-    if not os.path.isfile("plays_table.csv"):
-        with open("plays_table.csv", "w", encoding="UTF-8") as f:
-            print("\"Table ID\",\"Seat\",\"Player Name\",\"Team Name\"", file=f)
+def write_header(name, fd):
+    # creates headers for csv files
+    match name:
+        # round.csv
+        case "round.csv":
+            print("\"Round ID\",\"Tournament Name\",\"Team One\",\"Team Two\"", file=fd)
+        # board.csv
+        case "board.csv":
+            print("\"Board ID\",\"Round ID\",\"Dealer\",\"Vulnerability\",\"Team One IMPs\",\"Team Two IMPs\"", file=fd)
+        # table.csv
+        case "table.csv":
+            print("\"Table ID\",\"Paired ID\",\"Board ID\",\"Bid Phase\",\"First Bid\",\"Last Bid\",\"Result\",\"Raw Score\"", file=fd)
+        # hand.csv
+        case "hand.csv":
+            print("\"Board ID\",\"Position\",\"Spades\",\"Hearts\",\"Diamonds\",\"Clubs\",\"High Card Points\"", file=fd)
+        # trick.csv
+        case "trick.csv":
+            print("\"Trick Number\",\"Table ID\",\"First Seat\",\"Winning Seat\",\"Play\"", file=fd)
+        # team.csv
+        case "team.csv":
+            print("\"Team Name\"", file=fd)
+        # player.csv
+        case "player.csv":
+            print("\"Player Name\",\"Team Name\"", file=fd)
+        # plays_table.csv
+        case "plays_table.csv":
+            print("\"Table ID\",\"Seat\",\"Player Name\",\"Team Name\"", file=fd)
 
 def write_csv(round: parser_classes.Round):
     global r_id, b_id, t_id
-    # write headers to file (if they don't exist)
-    write_headers()
     # open files
-    with (open("round.csv", "a", encoding="UTF-8") as round_csv, open("board.csv", "a", encoding="UTF-8") as board_csv,
-          open("table.csv", "a", encoding="UTF-8") as table_csv, open("hand.csv", "a", encoding="UTF-8") as hand_csv,
-          open("trick.csv", "a", encoding="UTF-8") as trick_csv, open("team.csv", "a", encoding="UTF-8") as team_csv,
-          open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as plays_csv):
+    with (open("round.csv", "w", encoding="UTF-8") as round_csv, open("board.csv", "w", encoding="UTF-8") as board_csv,
+          open("table.csv", "w", encoding="UTF-8") as table_csv, open("hand.csv", "w", encoding="UTF-8") as hand_csv,
+          open("trick.csv", "w", encoding="UTF-8") as trick_csv, open("team.csv", "w", encoding="UTF-8") as team_csv,
+          open("player.csv", "w", encoding="UTF-8") as player_csv, open("plays_table.csv", "w", encoding="UTF-8") as plays_csv):
         # write to round.csv (round_id, tournament_name, team_one_name, team_two_name)
         print(r_id, round, file=round_csv, sep=",")
 
@@ -197,12 +188,13 @@ def main():
                 for line in fd:
                     l_set.add(line)
             with open(f, mode="w", encoding="UTF-8") as fd:
+                write_header(f, fd)
                 for line in l_set:
                     print(line, file=fd, end="")
     except Exception as err:
         print("Error removing duplicate tuples from CSVs:", err)
     print("Done")
-    
+   
     with open("config_parser.json", mode="w", encoding="UTF-8") as f:
         s = "{\n  \"parser\": {\n    \"r_id\": " + str(r_id) + ",\n    \"b_id\": "+ str(b_id) +",\n    \"t_id\": " + str(t_id) + "\n  }\n}"
         f.write(s)

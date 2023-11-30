@@ -223,6 +223,8 @@ class Table:
                 bid_str = ""
             else:
                 bid_str += token
+        # store last bid
+        self.bids +=[Bid(dealer, bid_str)]
         # store important bid info
         self.status = self.bids[-4].doubled
         self.suit = self.last_bid.suit
@@ -283,7 +285,7 @@ class Trick:
     rank_lst = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
 
     def __str__(self):
-        res = self.leader + "," + self.winner + ",\""
+        res = str(self.leader) + "," + str(self.winner) + ",\""
         for card in self.cards:
             res += card
         res += '\"'
@@ -355,7 +357,7 @@ class Hand:
     
     def __str__(self):
         sep = '\",\"'
-        res = (self.position + ",\"" + self.suits[0] + sep + self.suits[1] + 
+        res = (str(self.position) + ",\"" + self.suits[0] + sep + self.suits[1] + 
                sep + self.suits[2] + sep + self.suits[3] + '\",' + str(self.hcp))
         return res
 
