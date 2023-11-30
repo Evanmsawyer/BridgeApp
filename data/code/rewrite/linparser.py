@@ -58,9 +58,11 @@ def read_file(filename):
             board.add_table(file)
         # check that number of boards and tables are valid
         else: raise Exception("invalid number of tables")
-        if round.total_boards != len(round.boards): raise Exception("invalid number of boards")
         # score all boards
-        for board in round.boards: board.score_board()
+        for board in round.boards: 
+            board.score_board()
+            if board.tables[0].board_number != board.tables[1].board_number:
+                raise Exception("mismatched table pairings")
         return round
 
 def write_header(name, fd):
@@ -94,10 +96,10 @@ def write_header(name, fd):
 def write_csv(round: parser_classes.Round):
     global r_id, b_id, t_id
     # open files
-    with (open("round.csv", "w", encoding="UTF-8") as round_csv, open("board.csv", "w", encoding="UTF-8") as board_csv,
-          open("table.csv", "w", encoding="UTF-8") as table_csv, open("hand.csv", "w", encoding="UTF-8") as hand_csv,
-          open("trick.csv", "w", encoding="UTF-8") as trick_csv, open("team.csv", "w", encoding="UTF-8") as team_csv,
-          open("player.csv", "w", encoding="UTF-8") as player_csv, open("plays_table.csv", "w", encoding="UTF-8") as plays_csv):
+    with (open("round.csv", "a", encoding="UTF-8") as round_csv, open("board.csv", "a", encoding="UTF-8") as board_csv,
+          open("table.csv", "a", encoding="UTF-8") as table_csv, open("hand.csv", "a", encoding="UTF-8") as hand_csv,
+          open("trick.csv", "a", encoding="UTF-8") as trick_csv, open("team.csv", "a", encoding="UTF-8") as team_csv,
+          open("player.csv", "a", encoding="UTF-8") as player_csv, open("plays_table.csv", "a", encoding="UTF-8") as plays_csv):
         # write to round.csv (round_id, tournament_name, team_one_name, team_two_name)
         print(r_id, round, file=round_csv, sep=",")
 

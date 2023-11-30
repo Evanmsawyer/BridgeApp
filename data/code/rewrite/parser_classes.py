@@ -217,29 +217,36 @@ class Table:
                     if not self.bidding_opened:
                         self.bidding_opened = True
                         self.first_bid = bid
+                        self.declarer = bid.declarer
+                    elif dealer % 2 != self.declarer % 2:
+                        self.declarer = bid.declarer
                     self.last_bid = bid
                 # increment dealer and reset bid string
                 dealer = (dealer % 4) + 1
                 bid_str = ""
             else:
                 bid_str += token
-        # store last bid
+        # store last bid/pass
         self.bids +=[Bid(dealer, bid_str)]
-        # store important bid info
-        self.status = self.bids[-4].doubled
-        self.suit = self.last_bid.suit
-        # get declarer
+        
+        #check for pass out
         if self.bidding_opened:
-            for b in self.bids:
-                if b.suit == self.suit and b.declarer % 2 == self.last_bid.declarer % 2:
-                    self.declarer = b.declarer
+            # store important bid info
+            self.status = self.bids[-4].doubled
+            self.suit = self.last_bid.suit
             self.contract_level = self.last_bid.value
             self.result = str(self.contract_level) + self.suit
         else:
             self.last_bid = None
             self.first_bid = None
+            self.status = 0
+            self.suit = None
+            self.declarer = 0
+            self.tricks = []
 
     def __init__(self, dealer, info, vuln):
+        # store board num for validity checks
+        self.board_number = int(info[1][1:])
         # set dealer
         self.dealer = dealer
         # set vulnerability
