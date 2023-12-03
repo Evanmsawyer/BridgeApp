@@ -171,28 +171,29 @@ def on_tree_selection(event):
     if selected_items:  # Check if something is selected
         item = result_tree.item(selected_items[0])  # Assuming single selection
         row_data = item['values']
-
-        print(columns)
-        
+  
         # Assuming 'TableID' is one of the columns, and we know its index
         # Replace 'table_id_index' with the actual index of 'TableID' column
-        if columns and columns.index('TableID'):
+        if "TableID" in columns:
             table_id_index = columns.index('TableID')
             table_id = row_data[table_id_index]
             print(f"Selected TableID: {table_id}")  # Or perform other actions with the TableID
 
-        currentTable = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
-        print(currentTable)
-        currentNHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (3, table_id))
-        print(currentNHand)
-        currentSHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (1, table_id))
-        print(currentSHand)
-        currentEHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (4, table_id))
-        print(currentEHand)
-        currentWHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (2, table_id))
-        print(currentWHand)
-        currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
-        print(currentTricks)
+            currentTable = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+            print(currentTable)
+            currentNHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (3, table_id))
+            print(currentNHand)
+            currentSHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (1, table_id))
+            print(currentSHand)
+            currentEHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (4, table_id))
+            print(currentEHand)
+            currentWHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (2, table_id))
+            print(currentWHand)
+            currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
+            print(currentTricks)
+
+            del bridge_app
+            bridge_app = BridgeGameApp(tab_play_by_play)
 
 result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
 
@@ -205,7 +206,7 @@ tab_play_by_play = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_play_by_play, text="Play-by-Play")
 
 class BridgeGameApp:
-    def __init__(self, root, gamedata):
+    def __init__(self, frame):
         # Load card images
         self.card_images = self.load_card_images()
 
@@ -220,8 +221,8 @@ class BridgeGameApp:
         self.next_button.pack(side=tk.RIGHT)
 
         # Create a frame to display cards
-        self.card_frame = tk.Frame(root)
-        self.card_frame.pack()
+        self.frame = tk.Frame(root)
+        self.frame.pack()
 
         # Placeholder for card labels (to display card images)
         self.card_labels = []
@@ -235,12 +236,9 @@ class BridgeGameApp:
         cards_path = os.path.join(script_dir, cards_folder)
         card_images = {}
         #Heart is 2, Diamonad is 4, Spade is 5, Club is 7
-        for suit in ['2', '4', '5', '7']:
-            for value in ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']:
-                if value != 'J' and  value != 'K' and value != 'Q':
-                    card_name = value + '.' + suit
-                else:
-                    card_name = value + suit
+        for suit in ['S', 'D', 'C', 'H']:
+            for value in ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']:
+                card_name = suit + value
                 image_path = os.path.join(cards_path, card_name + '.png')
                 image = Image.open(image_path)
                 card_images[card_name] = ImageTk.PhotoImage(image)
@@ -274,7 +272,22 @@ class BridgeGameApp:
 tab_statistics = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_statistics, text="Statistics")
 
-app = BridgeGameApp(tab_play_by_play, "")
+def fetch_statistics():
+    total_tricks = db.execute_query("SELECT COUNT(*) FROM Tricks")
+    return {
+        #"North Player Total Tricks": total_tricks,
+    }
+
+# Function to update statistics view
+def update_statistics_view():
+    stats = fetch_statistics()
+
+    for i, (stat_name, stat_value) in enumerate(stats.items()):
+        ttk.Label(tab_statistics, text=f"{stat_name}:", style='TLabel').grid(row=i, column=0, sticky='W', padx=5, pady=5)
+        ttk.Label(tab_statistics, text=str(stat_value), style='TLabel').grid(row=i, column=1, sticky='W', padx=5, pady=5)
+
+
+bridge_app = BridgeGameApp(tab_play_by_play)
 root.mainloop()
 
 
