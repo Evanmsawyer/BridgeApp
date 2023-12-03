@@ -5,6 +5,7 @@ import sys
 import os
 import parser_classes
 import json
+import mysql.connector
 
 r_id = 0; b_id = 0; t_id = 0; num_read = 1
 if os.path.isfile("parser_config.json"):
@@ -64,6 +65,86 @@ def read_file(filename):
             if board.tables[0].board_number != board.tables[1].board_number:
                 raise Exception("mismatched table pairings")
         return round
+
+def insert_data(round: parser_classes.Round, db: mysql.connector.MySQLConnection):
+    # set up cursor object
+    cursor = db.cursor()
+    # get round ID
+    cursor.execute("SELECT max(RoundID) FROM BridgeDB.RoundID")
+    r_id = cursor.fetchall()[0][0] + 1
+    # get table ID
+    cursor.execute("SELECT max(TableID) FROM BridgeDB.TableEntity")
+    t_id = cursor.fetchall()[0][0] + 1
+    # get board ID
+    cursor.execute("SELECT max(BoardID) FROM BridgeDB.Board")
+    b_id = cursor.fetchall()[0][0] + 1
+    # start transaction
+    try:
+        db.autocommit = False
+        db.start_transaction()
+        # begin insertions
+        for team in round.teams:
+            name = team.team_name
+            # teams
+            cursor.execute("IF " + name + " NOT IN (SELECT * FROM BridgeDB.Team)"
+                        "INSERT INTO BridgeDB.Team VALUE (" + name + ");"
+                        "ENDIF")
+            
+            for player in team.players:
+                # players
+                cursor.execute("IF NOT EXISTS (SELECT * FROM BridgeDB.Player"
+                            "WHERE Player.Name = \"" + player + "\" AND Player.TeamName = \"" + name + "\")"
+                            "INSERT INTO BridgeDB.Player VALUES (\"" + player + "\",\"" + name + "\");"
+                            "ENDIF")
+        # round
+        cursor.execute("INSERT INTO BridgeDB.Round"
+                       "VALUES (" + str(r_id) + "," + str(round) + ")")
+        
+        for board in round.boards:
+            # board
+            cursor.execute("INSERT INTO BridgeDB.Board"
+                           "VALUES(" + str(b_id) + "," + str(r_id) + str(board) + ")")
+            # hand
+            for hand in board.hands:
+                cursor.execute("INSERT INTO BridgeDB.Hands"
+                               "VALUES (" + str(b_id) + "," + str(hand) + ")")
+            # tables
+            table1 = board.tables[0]
+            table2 = board.tables[1]
+            # turn off key constraints
+            cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+            # table 1
+            cursor.execute("INSERT INTO BridgeDB.TableEntity"
+                           "VALUES(" + str(t_id) + "," + str(t_id + 1) + "," + str(b_id) + "," + str(table1) + ")")
+            # table 2
+            cursor.execute("INSERT INTO BridgeDB.TableEntity"
+                           "VALUES(" + str(t_id + 1) + "," + str(t_id) + "," + str(b_id) + "," + str(table2) + ")")
+            # turn key constraints back on
+            cursor.execute("SET FOREIGN_KEY_CHECKS=1")
+            # trick
+            for trick in table1.tricks:
+                cursor.execute("INSERT INTO BridgeDB.Trick"
+                               "VALUES(" + str(trick.num) + "," + str(t_id) + "," + str(trick) + ")")
+            for trick in table2.tricks:
+                cursor.execute("INSERT INTO BridgeDB.Trick"
+                               "VALUES(" + str(trick.num) + "," + str(t_id + 1) + "," + str(trick) + ")")
+            # plays table
+            for player in round.player_list:
+                i = round.player_list.index(player)
+                team = str(round.teams[0]) if player in round.teams[0].members else str(round.teams[1])
+                pos = str((i % 4) + 1)
+                name = '\"' + player + '\"'
+                if i > 3:
+                    cursor.execute("INSERT INTO BridgeDB.PlaysTable"
+                                   "VALUES (" + str(t_id + 1) + "," + pos + "," + name + "," + team + ")")
+                else:
+                    cursor.execute("INSERT INTO BridgeDB.PlaysTable"
+                                   "VALUES (" + str(t_id) + "," + pos + "," + name + "," + team + ")")
+            # commit
+            db.commit()
+    except mysql.connector.Error as error:
+        db.rollback()
+        raise error
 
 def write_header(name, fd):
     # creates headers for csv files

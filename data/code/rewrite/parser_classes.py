@@ -107,7 +107,7 @@ class Board:
         self.tables = [Table(self.dealer, info, self.vuln)]
     
     def __str__(self):
-        res = str(self.dealer) + "\"," + self.vuln + '\",' + str(self.team1_imps) + ',' + str(self.team2_imps)
+        res = str(self.dealer) + ",\"" + self.vuln + '\",' + str(self.team1_imps) + ',' + str(self.team2_imps)
         return res
 
 class Table:
