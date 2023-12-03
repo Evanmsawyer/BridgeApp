@@ -1,6 +1,6 @@
 SET DELIMITER $$
-CREATE PROCEDURE BoardSearch(@BoardIDInput INT) 
-AS BEGIN
-    SELECT * FROM bridgedb.Board WHERE BoardID = @BoardIDInput;
+CREATE PROCEDURE BoardSearch(BoardIDInput INT) 
+BEGIN
+    SELECT * FROM bridgedb.Board WHERE BoardID = BoardIDInput;
 END$$
 SET DELIMITER ;
