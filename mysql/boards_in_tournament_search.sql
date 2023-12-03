@@ -1,9 +1,9 @@
 SET DELIMITER $$
-CREATE PROCEDURE BoardsInTournament(@TournamentName VARCHAR(255)) 
-AS BEGIN
+CREATE PROCEDURE BoardsInTournament(InputName VARCHAR(255)) 
+BEGIN
     SELECT *
-    FROM bridgedb.Board 
+    FROM bridgedb.Board
     NATURAL JOIN bridgedb.Round
-    WHERE TournamentName = @TournamentName;
+    WHERE TournamentName = InputName;
 END$$
 SET DELIMITER ;
