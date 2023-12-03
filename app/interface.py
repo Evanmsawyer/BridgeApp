@@ -18,6 +18,13 @@ currentEHand = None
 currentWHand = None
 currentTricks = None
 
+pos_dic = {
+    1 : "S",
+    2 : "W",
+    3 : "N",
+    4 : "E"
+}
+
 # Function to update the result view
 def update_result_view(columns, data):
     result_tree.delete(*result_tree.get_children())
@@ -187,15 +194,15 @@ def on_tree_selection(event):
 
         currentTable = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
         print(currentTable)
-        currentNHand = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        currentNHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (3, table_id))
         print(currentNHand)
-        currentSHand = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        currentSHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (1, table_id))
         print(currentSHand)
-        currentEHand = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        currentEHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (4, table_id))
         print(currentEHand)
-        currentWHand = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        currentWHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (2, table_id))
         print(currentWHand)
-        currentTricks = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
         print(currentTricks)
 
 result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
