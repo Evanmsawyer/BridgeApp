@@ -32,13 +32,10 @@ class DBConnector:
         with open(filename, 'r') as file:
             return json.load(file)
 
-    def create_connection(self, config, first_attempt=True):
+    def create_connection(self, config):
         """
         creates DB connection
 
-        Args:
-            config (dict): The database configuration
-            first_attempt (bool, optional): Whether this is the first attempt to connect. Defaults to True.
         Returns:
             connection: mysql.connector.connection_cext.CMySQLConnection object
         Raises:
@@ -46,11 +43,6 @@ class DBConnector:
         """
         try:
             return mysql.connector.connect(**config)
-        except TimeoutError as e:
-            if first_attempt:
-                return self.create_connection(config, False)
-            else:
-                print(f"The error '{e}' occurred")
         except Error as e:
             print(f"The error '{e}' occurred")
 
@@ -83,7 +75,7 @@ class DBConnector:
             Error: If the query cannot be executed
         """
         cursor = self.connection.cursor()
-        cursor.execute(query, parameters)
+        cursor.execute(query)
         if fetchall:
             result = {}
             for row in cursor.fetchall():
