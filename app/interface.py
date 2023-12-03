@@ -17,12 +17,6 @@ currentEHand = None
 currentWHand = None
 currentTricks = None
 
-pos_dic = {
-    1 : "S",
-    2 : "W",
-    3 : "N",
-    4 : "E"
-}
 
 # Function to update the result view
 def update_result_view(columns, data):
@@ -80,6 +74,49 @@ def execute_search():
                 procedure_name = "TableInTournament"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
+            elif procedure_name == "Tricks":
+                #Test Data: 
+                procedure_name = "TotalTricksByPlayer"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "HCP":
+                procedure_name = "HCPSearchInRange"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Last Bid":
+                procedure_name = "EndingBidSearch"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Board ID":
+                procedure_name = "BoardSearch"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Player":
+                procedure_name = "PlayerSearch"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Dealer":
+                procedure_name = "DealerSearch"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Players By Team":
+                procedure_name = "PlayerSearchByTeam"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Seat":
+                procedure_name = "GetSeat"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Score":
+                procedure_name = "RawScoreSearch"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Slams":
+                procedure_name = "SlamBidAndMade"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            else:
+                print("Invalid procedure name:", procedure_name)
         else:
             if search != '':
                 print("Invalid format in search text:", search)
@@ -133,9 +170,12 @@ search_input_frame.pack(fill='x', expand=False, pady=15)
 criteria_label = ttk.Label(search_input_frame, text="Select Criteria:", font=custom_font, style='TLabel')
 criteria_label.pack(side='left', padx=5, pady=5)
 
-criteria_options = ['Player', 'HCP', 'First Bid', 'Last Bid', 'Board ID', 'Tournament']
+criteria_options = ['Player', 'HCP', 'First Bid', 'Last Bid', 
+                    'Board ID', 'Tournament', 'Tricks', 'Slams', 'Players By Team', 
+                    'Seat', 'Dealer', 'Score']
+criteria_options.sort()
 criteria_combobox = ttk.Combobox(search_input_frame, values=criteria_options, state='readonly', font=custom_font)
-criteria_combobox.pack(side='left', padx=5, pady=5)
+criteria_combobox.pack(side='left', padx=criteria_options.__len__(), pady=criteria_options.__len__())
 
 criteria_value_entry = ttk.Entry(search_input_frame, font=custom_font)
 criteria_value_entry.pack(side='left', fill='x', expand=True, padx=5, pady=5)
@@ -179,18 +219,18 @@ def on_tree_selection(event):
             table_id = row_data[table_id_index]
             print(f"Selected TableID: {table_id}")  # Or perform other actions with the TableID
 
-            currentTable = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
-            print(currentTable)
-            currentNHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (3, table_id))
-            print(currentNHand)
-            currentSHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (1, table_id))
-            print(currentSHand)
-            currentEHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (4, table_id))
-            print(currentEHand)
-            currentWHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (2, table_id))
-            print(currentWHand)
-            currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
-            print(currentTricks)
+        currentTable = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        print(currentTable)
+        currentNHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (3, table_id))
+        print(currentNHand)
+        currentSHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (1, table_id))
+        print(currentSHand)
+        currentEHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (4, table_id))
+        print(currentEHand)
+        currentWHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (2, table_id))
+        print(currentWHand)
+        currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
+        print(currentTricks)
 
             del bridge_app
             bridge_app = BridgeGameApp(tab_play_by_play)
@@ -271,6 +311,24 @@ class BridgeGameApp:
 # Tab 3: Statistics Details
 tab_statistics = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_statistics, text="Statistics")
+
+# Tab 4: Upload File
+tab_upload = ttk.Frame(notebook, style='TFrame')
+notebook.add(tab_upload, text="Upload")
+
+# Tab 5: Edit
+tab_edit = ttk.Frame(notebook, style='TFrame')
+notebook.add(tab_edit, text="Edit")
+
+
+# Tab 4: Upload File
+tab_upload = ttk.Frame(notebook, style='TFrame')
+notebook.add(tab_upload, text="Upload")
+
+# Tab 5: Edit
+tab_edit = ttk.Frame(notebook, style='TFrame')
+notebook.add(tab_edit, text="Edit")
+
 
 def fetch_statistics():
     total_tricks = db.execute_query("SELECT COUNT(*) FROM Tricks")
