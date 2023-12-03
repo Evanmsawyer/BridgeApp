@@ -1,10 +1,10 @@
 SET DELIMITER $$
-CREATE PROCEDURE TableInTournament(@TournamentName VARCHAR(255)) 
-AS BEGIN
-    SELECT TableID 
-    FROM bridgedb.Round 
-    NATURAL JOIN bridgedb.Board 
-    NATURAL JOIN bridgedb.TableEntity 
-    WHERE TournamentName = @TournamentName;
+CREATE PROCEDURE TableInTournament(InputName VARCHAR(255)) 
+BEGIN
+    SELECT TableID, PairedTableID, BoardID, BidPhase, FirstBid, LastBid, Result, RawScore
+    FROM BridgeDB.Round 
+    NATURAL JOIN BridgeDB.Board 
+    NATURAL JOIN BridgeDB.TableEntity 
+    WHERE TournamentName = InputName;
 END$$
 SET DELIMITER ;
