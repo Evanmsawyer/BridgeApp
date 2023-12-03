@@ -2,8 +2,8 @@ SET DELIMITER $$
 CREATE PROCEDURE TricksForTable(TableIdInput INT) 
 BEGIN
     SELECT *
-    FROM bridgedb.trick
-    WHERE trick.TableID = TableIdInput
-    ORDER BY trick.TrickNumber ASC;
+    FROM BridgeDB.Trick
+    WHERE Trick.TableID = TableIdInput
+    ORDER BY Trick.TrickNumber ASC;
 END$$
 SET DELIMITER ;
