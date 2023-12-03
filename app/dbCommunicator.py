@@ -1,6 +1,7 @@
 import mysql.connector
 from mysql.connector import Error
 import json
+import os
 
 class DBConnector:   
     """
@@ -13,11 +14,14 @@ class DBConnector:
     
     """
     def __init__(self):
-        self.db_config = self.load_db_config('../db_config.json')
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        jsonconnectionpath = 'db_config.json'
+        connectionpath = os.path.join(script_dir, jsonconnectionpath)
+        self.db_config = self.load_db_config(connectionpath)
         self.connection = self.create_connection(self.db_config)
     
-    def __del__(self):
-        self.close_connection(self.connection)
+    #def __del__(self):
+        #self.close_connection(self.connection)
 
     def load_db_config(self, filename):
         """
@@ -104,7 +108,7 @@ class DBConnector:
         cursor = self.connection.cursor()
         cursor.callproc(query, parameters)
         
-    def execute_stored_procedure(self, procedure_name, parameters=(), auto_commit=True):
+    def execute_stored_procedure(self, procedure_name, parameters=(), auto_commit=False):
         """
         Executes a stored proedure
 
@@ -117,11 +121,35 @@ class DBConnector:
             cursor: mysql.connector.cursor_cext.CMySQLCursor object        
         Raises:
             Error: If the store procedure cannot be executed
+        print(procedure_name)
         """
-        with self.connection.cursor() as cursor:
+        """ with self.connection.cursor() as cursor:
             cursor.callproc(procedure_name, parameters)
             if auto_commit:
                 self.connection.commit()
             else:
-                return cursor.fetchall()
+                return cursor.fetchall()"""
+            
+        if not isinstance(parameters, tuple):
+            raise ValueError("Parameters must be a tuple")
+
+        try:
+            with self.connection.cursor(dictionary=True) as cursor:
+                #print(parameters)
+                cursor.callproc(procedure_name, parameters)
+
+                # Fetching result set
+                result = []
+                for result_set in cursor.stored_results():
+                    result.extend(result_set.fetchall())
+
+                column_names = list(result[0].keys()) if result else []
+
+                if auto_commit:
+                    self.connection.commit()
+
+                return column_names, result
+        except Exception as e:
+            self.connection.rollback()
+            raise e
                 

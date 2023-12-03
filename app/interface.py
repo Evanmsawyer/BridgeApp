@@ -1,102 +1,29 @@
 import tkinter as tk
 from tkinter import ttk
-import mysql.connector
-from mysql.connector import Error
+import pandas as pd
+from PIL import Image, ImageTk
+import os
 import json
+from dbCommunicator import DBConnector
 
-# Load database configuration from a JSON file
-def load_db_config(filename):
-    with open(filename, 'r') as file:
-        return json.load(file)
-
-db_config = load_db_config('db_config.json')
-
-# Function to create a database connection
-def create_connection():
-    connection = None
-    try:
-        connection = mysql.connector.connect(**db_config)
-    except Error as e:
-        print(f"Error: '{e}'")
-    return connection
-
-# Function to build and execute a dynamic query based on selected checkboxes
-def dynamic_search():
-    conditions = []
-    parameters = []
-
-    # Or we can call the sql files and store the tables for joining.
-    if cb_board_id_var.get():
-        board_id = entry_board_id.get()
-        conditions.append("Board.BoardID = %s")
-        parameters.append(board_id)
-
-    if cb_player_name_var.get():
-        player_name = entry_player_name.get()
-        conditions.append("Player.Name = %s")
-        parameters.append(player_name)
-
-    if cb_first_bid_var.get():
-        first_bid = entry_first_bid.get()
-        conditions.append("TableEntity.FirstBid = %s")
-        parameters.append(first_bid)
-
-    if cb_last_bid_var.get():
-        last_bid = entry_last_bid.get()
-        conditions.append("TableEntity.LastBid = %s")
-        parameters.append(last_bid)
-
-    if cb_high_card_points_var.get():
-        hcp = entry_high_card_points.get()
-        conditions.append("Hands.HighCardPoints >= %s")
-        parameters.append(hcp)
-
-    if cb_suit_distribution_var.get():
-        suit_dist = entry_suit_distribution.get()
-        conditions.append("Hands.SuitDistribution = %s")
-        parameters.append(suit_dist)
-
-    # Building the base of the query
-    base_query = """
-    SELECT DISTINCT Board.BoardID, Player.Name, TableEntity.FirstBid, TableEntity.LastBid, Hands.HighCardPoints
-    FROM Board
-    LEFT JOIN TableEntity ON Board.BoardID = TableEntity.BoardID
-    LEFT JOIN PlaysTable ON TableEntity.TableID = PlaysTable.TableName
-    LEFT JOIN Player ON PlaysTable.PlayerName = Player.Name
-    LEFT JOIN Hands ON Player.Name = Hands.Position
-    """
-
-    # Add WHERE clause if there are conditions
-    if conditions:
-        query = base_query + " WHERE " + " AND ".join(conditions)
-    else:
-        query = base_query
-
-    result = run_query(query, parameters)
-    update_result_view(result)
-
-
-# Database query function
-def run_query(query, parameters=()):
-    connection = create_connection()
-    cursor = connection.cursor()
-    result = None
-    try:
-        cursor.execute(query, parameters)
-        result = cursor.fetchall()
-        connection.commit()
-    except Error as e:
-        print(f"Error: '{e}'")
-    finally:
-        cursor.close()
-        connection.close()
-    return result
+db = DBConnector()
+result_tree = None
+root = None
+tab_search = None
+CURRENTGAME = None
 
 # Function to update the result view
-def update_result_view(data):
+def update_result_view(columns, data):
     result_tree.delete(*result_tree.get_children())
+    result_tree["columns"] = ()
+
+    result_tree["columns"] = columns
+    for col in columns:
+        result_tree.heading(col, text=col)
+        result_tree.column(col, width=120, minwidth=120, anchor="w")
     for row in data:
-        result_tree.insert('', 'end', values=row)
+        row_values = [row[col] for col in columns]
+        result_tree.insert('', 'end', values=row_values)
 
 # Create a scrollable frame
 class ScrollableFrame(ttk.Frame):
@@ -132,7 +59,18 @@ def add_to_search():
 # Function to execute the search
 def execute_search():
     search_text = search_bar.get()
-    
+    for search in search_text.split('"'):
+        if ':' in search:
+            procedure_name, parameters = search.replace('"', '').split(':', 1)  # Removing quotes and splitting on the first colon
+            print(f"Procedure: {procedure_name}, Parameters: {parameters}")
+            if procedure_name == "Tournament":
+                #Test Data: 2013 USBC USA2 Final
+                procedure_name = "TableInTournament"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+        else:
+            if search != '':
+                print("Invalid format in search text:", search)
 
 # Setting up the main window
 root = tk.Tk()
@@ -177,13 +115,13 @@ notebook.add(tab_search, text="Search")
 
 # Frame for search input widgets
 search_input_frame = ttk.Frame(tab_search, padding="10", style='TFrame')
-search_input_frame.pack(fill='x', expand=False, pady=10)
+search_input_frame.pack(fill='x', expand=False, pady=15)
 
 # Dropdown menu for criteria
 criteria_label = ttk.Label(search_input_frame, text="Select Criteria:", font=custom_font, style='TLabel')
 criteria_label.pack(side='left', padx=5, pady=5)
 
-criteria_options = ['Player', 'HCP', 'First Bid', 'Last Bid', 'Board ID']
+criteria_options = ['Player', 'HCP', 'First Bid', 'Last Bid', 'Board ID', 'Tournament']
 criteria_combobox = ttk.Combobox(search_input_frame, values=criteria_options, state='readonly', font=custom_font)
 criteria_combobox.pack(side='left', padx=5, pady=5)
 
@@ -208,24 +146,116 @@ search_button.pack(side='left', padx=5, pady=5)
 #scroll_frame.pack(fill='both', expand=True)
 
 # Configure the Treeview inside the scrollable frame for results
-result_tree = ttk.Treeview(columns=("Column1", "Column2", "Column3", "Column4"), show="headings")
-result_tree.pack(fill='both', padx="10", pady="10", expand=True)
+result_tree = ttk.Treeview(tab_search, show="headings")
+result_tree.pack(side="bottom", padx="5", pady="5", fill="both", expand=True)
+
+scrollbar_horizontal = ttk.Scrollbar(tab_search, orient="horizontal", command=result_tree.xview)
+scrollbar_horizontal.pack(side="bottom", fill="x")
+result_tree.configure(xscrollcommand=scrollbar_horizontal.set)
+
+def on_tree_selection(event):
+    selected_items = result_tree.selection()
+    columns = result_tree.cget("columns")
+    if selected_items:  # Check if something is selected
+        item = result_tree.item(selected_items[0])  # Assuming single selection
+        row_data = item['values']
+
+        print(columns)
+        
+        # Assuming 'TableID' is one of the columns, and we know its index
+        # Replace 'table_id_index' with the actual index of 'TableID' column
+        if columns and columns.index('TableID'):
+            table_id_index = columns.index('TableID')
+            table_id = row_data[table_id_index]
+            print(f"Selected TableID: {table_id}")  # Or perform other actions with the TableID
+
+        CURRENTGAME = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s", (table_id,))
+        print(CURRENTGAME)
+
+result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
+
+#result_tree.heading("Column1", text="")
+#result_tree.column("Column1", width=120)
+
 
 # Tab 2: Play-by-Play Details
 tab_play_by_play = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_play_by_play, text="Play-by-Play")
 
+class BridgeGameApp:
+    def __init__(self, root, gamedata):
+        # Load card images
+        self.card_images = self.load_card_images()
+
+        # Initialize game state
+        self.current_play = 0
+
+        # Create buttons
+        self.back_button = tk.Button(root, text="Back", command=self.move_back)
+        self.back_button.pack(side=tk.LEFT)
+
+        self.next_button = tk.Button(root, text="Next", command=self.move_next)
+        self.next_button.pack(side=tk.RIGHT)
+
+        # Create a frame to display cards
+        self.card_frame = tk.Frame(root)
+        self.card_frame.pack()
+
+        # Placeholder for card labels (to display card images)
+        self.card_labels = []
+
+        # Initialize or load a game state here
+        self.game_state = [...]
+
+    def load_card_images(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        cards_folder = 'assets/cards'
+        cards_path = os.path.join(script_dir, cards_folder)
+        card_images = {}
+        #Heart is 2, Diamonad is 4, Spade is 5, Club is 7
+        for suit in ['2', '4', '5', '7']:
+            for value in ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']:
+                if value != 'J' and  value != 'K' and value != 'Q':
+                    card_name = value + '.' + suit
+                else:
+                    card_name = value + suit
+                image_path = os.path.join(cards_path, card_name + '.png')
+                image = Image.open(image_path)
+                card_images[card_name] = ImageTk.PhotoImage(image)
+        return card_images
+
+    def display_cards(self):
+        # Clear existing cards
+        for label in self.card_labels:
+            label.destroy()
+
+        # Display cards for the current play
+        cards = self.game_state[self.current_play]
+        self.card_labels = []
+        for card in cards:
+            label = tk.Label(self.card_frame, image=self.card_images[card])
+            label.pack(side=tk.LEFT)
+            self.card_labels.append(label)
+
+    def move_next(self):
+        if self.current_play < len(self.game_state) - 1:
+            self.current_play += 1
+            self.display_cards()
+
+    def move_back(self):
+        if self.current_play > 0:
+            self.current_play -= 1
+            self.display_cards()
+
+
 # Tab 3: Statistics Details
 tab_statistics = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_statistics, text="Statistics")
 
+app = BridgeGameApp(tab_play_by_play, "")
 root.mainloop()
 
-# Result view setup...
 
-# Play-by-Play Tab Content...
-# Here you can add widgets and functionality to display play-by-play details
 
-root.mainloop()
 
 
