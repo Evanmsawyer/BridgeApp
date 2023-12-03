@@ -27,36 +27,46 @@ class DBConnector:
         """
         Load database configuration from a JSON file
 
-    Args:
-        filename (str): The name of the JSON file containing the configuration
+        Args:
+            filename (str): The name of the JSON file containing the configuration
 
-    Returns:
-        dict: database configuration    
-    """
-    with open(filename, 'r') as file:
-        return json.load(file)
+        Returns:
+            dict: database configuration    
+        """
+        with open(filename, 'r') as file:
+            return json.load(file)
 
-db_config = load_db_config('../db_config.json')
+    def create_connection(self, config):
+        """
+        creates DB connection
 
-def create_connection():
-    """
-    creates DB connection
+        Returns:
+            connection: mysql.connector.connection_cext.CMySQLConnection object
+        Raises:
+            Error: If the connection cannot be established 
+        """
+        try:
+            return mysql.connector.connect(**config)
+        except Error as e:
+            print(f"The error '{e}' occurred")
 
-    Returns:
-        connection: mysql.connector.connection_cext.CMySQLConnection object
-    Raises:
-        Error: If the connection cannot be established 
-    """
-    connection = None
-    try:
-        connection = mysql.connector.connect(**db_config)
-    except Error as e:
-        print(f"Error: '{e}'")
-    return connection
+    def close_connection(self):
+        """
+        closes DB connection
 
-def execute_query(query, connection, parameters=(), auto_commit=True):
-    """
-    Executes DB query
+        Args:
+            connection (mysql.connector.connection_cext.CMySQLConnection): The connection to the database
+        Raises:
+            Error: If the connection cannot be closed 
+        """
+        try:
+            self.connection.close()
+        except Error as e:
+            print(f"The error '{e}' occurred")
+
+    def execute_query(self, query, parameters=(), fetchall=True, num_rows=0):
+        """
+        Executes DB query
 
         Args:
             query (str): The query to be executed
