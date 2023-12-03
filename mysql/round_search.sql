@@ -1,6 +1,6 @@
 SET DELIMITER $$
-CREATE PROCEDURE RoundSearch(@TournamentName VARCHAR(255)) 
-AS BEGIN
-    SELECT * FROM bridgedb.Round WHERE TournamentName = @TournamentName;
+CREATE PROCEDURE RoundSearch(InputName VARCHAR(255)) 
+BEGIN
+    SELECT * FROM BridgeDB.Round WHERE TournamentName = InputName;
 END$$
 SET DELIMITER ;
