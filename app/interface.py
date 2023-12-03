@@ -95,6 +95,26 @@ def execute_search():
                 procedure_name = "PlayerSearch"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
+            elif procedure_name == "Dealer":
+                procedure_name = "DealerSearch"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Players By Team":
+                procedure_name = "PlayerSearchByTeam"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Seat":
+                procedure_name = "GetSeat"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Score":
+                procedure_name = "RawScoreSearch"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
+            elif procedure_name == "Slams":
+                procedure_name = "SlamBidAndMade"
+                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                update_result_view(columns, data)
             else:
                 print("Invalid procedure name:", procedure_name)
         else:
@@ -150,7 +170,9 @@ search_input_frame.pack(fill='x', expand=False, pady=15)
 criteria_label = ttk.Label(search_input_frame, text="Select Criteria:", font=custom_font, style='TLabel')
 criteria_label.pack(side='left', padx=5, pady=5)
 
-criteria_options = ['Player', 'HCP', 'First Bid', 'Last Bid', 'Board ID', 'Tournament', 'Tricks', 'Slams', 'Players By Team']
+criteria_options = ['Player', 'HCP', 'First Bid', 'Last Bid', 
+                    'Board ID', 'Tournament', 'Tricks', 'Slams', 'Players By Team', 
+                    'Seat', 'Dealer', 'Score']
 criteria_options.sort()
 criteria_combobox = ttk.Combobox(search_input_frame, values=criteria_options, state='readonly', font=custom_font)
 criteria_combobox.pack(side='left', padx=criteria_options.__len__(), pady=criteria_options.__len__())
@@ -295,6 +317,10 @@ notebook.add(tab_statistics, text="Statistics")
 # Tab 4: Upload File
 tab_upload = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_upload, text="Upload")
+
+# Tab 5: Edit
+tab_edit = ttk.Frame(notebook, style='TFrame')
+notebook.add(tab_edit, text="Edit")
 
 
 app = BridgeGameApp(tab_play_by_play, "")
