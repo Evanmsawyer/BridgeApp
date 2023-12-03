@@ -10,7 +10,12 @@ db = DBConnector()
 result_tree = None
 root = None
 tab_search = None
-CURRENTGAME = None
+currentTable = None
+currentNHand = None
+currentSHand = None
+currentEHand = None
+currentWHand = None
+currentTricks = None
 
 # Function to update the result view
 def update_result_view(columns, data):
@@ -169,8 +174,18 @@ def on_tree_selection(event):
             table_id = row_data[table_id_index]
             print(f"Selected TableID: {table_id}")  # Or perform other actions with the TableID
 
-        CURRENTGAME = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s", (table_id,))
-        print(CURRENTGAME)
+        currentTable = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        print(currentTable)
+        currentNHand = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        print(currentNHand)
+        currentSHand = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        print(currentSHand)
+        currentEHand = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        print(currentEHand)
+        currentWHand = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        print(currentWHand)
+        currentTricks = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+        print(currentTricks)
 
 result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
 
