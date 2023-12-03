@@ -232,8 +232,8 @@ def on_tree_selection(event):
         currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
         print(currentTricks)
 
-            del bridge_app
-            bridge_app = BridgeGameApp(tab_play_by_play)
+        del bridge_app
+        bridge_app = BridgeGameApp(tab_play_by_play)
 
 result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
 
