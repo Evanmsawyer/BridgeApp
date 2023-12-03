@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
 import pandas as pd
 from PIL import Image, ImageTk
 import os
@@ -107,6 +108,12 @@ root.title("Bridge Game Database Manager")
 root.geometry("800x600")
 root.maxsize(800, 600)
 
+def upload_file():
+    file_path = filedialog.askopenfilename()
+    if file_path:
+        # You can add your logic here to handle the file
+        print(f"File selected: {file_path}")
+
 # Styling
 style = ttk.Style()
 style.theme_use('clam')
@@ -133,6 +140,10 @@ custom_font = ('Helvetica', 12)
 # Main frame for tabs
 main_frame = ttk.Frame(root,style='TFrame')
 main_frame.pack(fill='both', expand=True)
+
+#Upload button in the top right corner
+upload_button = ttk.Button(main_frame, text="Upload File", command=upload_file, style='TButton')
+upload_button.pack(side='right', padx=5, pady=5)
 
 # Using ttk.Notebook for tabbed views
 notebook = ttk.Notebook(main_frame)  # Changed parent to main_frame
