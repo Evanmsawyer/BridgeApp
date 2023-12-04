@@ -704,7 +704,7 @@ def upload_file():
     if file_path:
         # call function to upload file to database
         round = linparser.read_file(file_path)
-        linparser.insert_data(round, db)
+        linparser.insert_data(round, db.connection)
 
 # Upload File Description
 upload_description = ttk.Label(tab_upload, text="You can upload data for bridge tournaments using .lin files only", style='TLabel')
