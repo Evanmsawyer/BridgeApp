@@ -1,11 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import font as tkfont
+from tkinter import filedialog
 import pandas as pd
 from PIL import Image, ImageTk
 import os
 import json
 from dbCommunicator import DBConnector
+import enum
 
 db = DBConnector()
 result_tree = None
@@ -20,6 +22,55 @@ currentWHand = None
 currentTricks = None
 global bridge_app 
 
+class SelectCriteria(enum.Enum):
+    Player = "Player"
+    HCP = "HCP"
+    FirstBid = "First Bid"
+    LastBid = "Last Bid"
+    BoardID = "Board Search"
+    Tournament = "Tournament"
+    Tricks = "Tricks"
+    Slams = "Slams"
+    PlayersByTeam = "Players By Team"
+    Seat = "Seat"
+    Dealer = "Dealer"
+    Score = "Score"
+
+    @property
+    def description(self):
+        descriptions = {
+            SelectCriteria.Player: "Player (Name)",
+            SelectCriteria.HCP: "HCP (High, Low)",
+            SelectCriteria.FirstBid: "First Bid (OpeningBid)",
+            SelectCriteria.LastBid: "Last Bid (EndingBid)",
+            SelectCriteria.BoardID: "Board Search (BoardID)",
+            SelectCriteria.Tournament: "Tournament (Name)",
+            SelectCriteria.Tricks: "Tricks (TableID)",
+            SelectCriteria.Slams: "Slams (N/A)",
+            SelectCriteria.PlayersByTeam: "Players By Team (Team Name)",
+            SelectCriteria.Seat: "Seat (TableID, Player Name, Team Name)",
+            SelectCriteria.Dealer: "Dealer (Number)",
+            SelectCriteria.Score: "Score (Low, High)",
+        }
+        return descriptions[self]
+    
+    @property
+    def procedure(self):
+        procedures = {
+            SelectCriteria.Player: "PlayerSearch",
+            SelectCriteria.HCP: "HCPSearchInRange",
+            SelectCriteria.FirstBid: "OpeningBidSearch",
+            SelectCriteria.LastBid: "EndingBidSearch",
+            SelectCriteria.BoardID: "BoardSearch",
+            SelectCriteria.Tournament: "TableInTournament",
+            SelectCriteria.Tricks: "TotalTricksByPlayer",
+            SelectCriteria.Slams: "SlamBidAndMade",
+            SelectCriteria.PlayersByTeam: "PlayerSearchByTeam",
+            SelectCriteria.Seat: "GetSeat",
+            SelectCriteria.Dealer: "DealerSearch",
+            SelectCriteria.Score: "RawScoreSearch",
+        }
+        return procedures[self]
 
 # Function to update the result view
 def update_result_view(columns, data):
@@ -58,7 +109,7 @@ class ScrollableFrame(ttk.Frame):
 
 # Function to add criteria to the search bar
 def add_to_search():
-    criteria = criteria_combobox.get()
+    criteria = criteria_combobox.get().split(' (')[0]
     value = criteria_value_entry.get()
     existing_text = search_bar.get()
     new_search_text = f'{existing_text} "{criteria}:{value}"' if existing_text else f'"{criteria}:{value}"'
@@ -71,52 +122,54 @@ def execute_search():
     for search in search_text.split('"'):
         if ':' in search:
             procedure_name, parameters = search.replace('"', '').split(':', 1)  # Removing quotes and splitting on the first colon
+            parameters = tuple(parameters.split(','))
+            
             print(f"Procedure: {procedure_name}, Parameters: {parameters}")
-            if procedure_name == "Tournament":
+            if procedure_name == SelectCriteria.Tournament.value: 
                 #Test Data: 2013 USBC USA2 Final
-                procedure_name = "TableInTournament"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Tournament.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Tricks":
+            elif procedure_name == SelectCriteria.Tricks.value:
                 #Test Data: 
-                procedure_name = "TotalTricksByPlayer"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Tricks.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "HCP":
-                procedure_name = "HCPSearchInRange"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.HCP.value:
+                procedure_name = SelectCriteria.HCP.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Last Bid":
-                procedure_name = "EndingBidSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.LastBid.value:
+                procedure_name = SelectCriteria.LastBid.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Board ID":
-                procedure_name = "BoardSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.BoardID.value:
+                procedure_name = SelectCriteria.BoardID.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Player":
-                procedure_name = "PlayerSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.Player.value:
+                procedure_name = SelectCriteria.Player.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Dealer":
-                procedure_name = "DealerSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.Dealer.value:
+                procedure_name = SelectCriteria.Dealer.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Players By Team":
-                procedure_name = "PlayerSearchByTeam"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.PlayersByTeam.value:
+                procedure_name = SelectCriteria.PlayersByTeam.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Seat":
-                procedure_name = "GetSeat"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.Seat.value: 
+                procedure_name = SelectCriteria.Seat.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Score":
-                procedure_name = "RawScoreSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.Score.value:
+                procedure_name = SelectCriteria.Score.procedure
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
-            elif procedure_name == "Slams":
-                procedure_name = "SlamBidAndMade"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+            elif procedure_name == SelectCriteria.Slams.value: 
+                procedure_name = SelectCriteria.Slams.procedure
+                columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
                 update_result_view(columns, data)
             else:
                 print("Invalid procedure name:", procedure_name)
@@ -173,9 +226,8 @@ search_input_frame.pack(fill='x', expand=False, pady=15)
 criteria_label = ttk.Label(search_input_frame, text="Select Criteria:", font=custom_font, style='TLabel')
 criteria_label.pack(side='left', padx=5, pady=5)
 
-criteria_options = ['Player', 'HCP', 'First Bid', 'Last Bid', 
-                    'Board ID', 'Tournament', 'Tricks', 'Slams', 'Players By Team', 
-                    'Seat', 'Dealer', 'Score']
+criteria_options = [c.description for c in SelectCriteria]
+
 criteria_options.sort()
 criteria_combobox = ttk.Combobox(search_input_frame, values=criteria_options, state='readonly', font=custom_font)
 criteria_combobox.pack(side='left', padx=criteria_options.__len__(), pady=criteria_options.__len__())
@@ -455,9 +507,52 @@ notebook.add(tab_statistics, text="Statistics")
 tab_upload = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_upload, text="Upload")
 
+#Function to handle file upload
+def upload_file():
+    file_path = filedialog.askopenfilename()
+    if file_path:
+        # call function to upload file to database
+        print("insert the data")
+
+# Upload File Description
+upload_description = ttk.Label(tab_upload, text="You can upload data for bridge tournaments using .lin files only", style='TLabel')
+upload_description.pack(pady=(20, 0))
+
+# Upload File Button
+upload_button = ttk.Button(tab_upload, text="Upload File", command=upload_file, style='TButton')
+upload_button.pack(pady=10)
+
 # Tab 5: Edit
 tab_edit = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_edit, text="Edit")
+
+def update_player_name():
+    print("update player name")
+
+def check_for_player_name(name):
+    print(name)
+
+# Update Description
+update_description = ttk.Label(tab_edit, text="If you are a player who would like to edit their name in the database, you can do so below.", style='TLabel')
+update_description.pack(pady=(20, 0))
+
+current_spelling_frame = ttk.Frame(tab_edit, style='TFrame')
+current_spelling_frame.pack(fill='x', pady=10)
+current_spelling_label = ttk.Label(current_spelling_frame, text="Current Spelling:", style='TLabel')
+current_spelling_label.pack(side='left', padx=5)
+current_spelling_entry = ttk.Entry(current_spelling_frame)
+current_spelling_entry.pack(side='left', fill='x', expand=True, padx=5)
+search_button = ttk.Button(current_spelling_frame, text="Search", command=lambda: check_for_player_name(current_spelling_entry.get()), style='TButton')
+search_button.pack(side='left', padx=5)
+
+new_spelling_frame = ttk.Frame(tab_edit, style='TFrame')
+new_spelling_frame.pack(fill='x', pady=10)
+new_spelling_label = ttk.Label(new_spelling_frame, text="New Spelling:", style='TLabel')
+new_spelling_label.pack(side='left', padx=5)
+new_spelling_entry = ttk.Entry(new_spelling_frame)
+new_spelling_entry.pack(side='left', fill='x', expand=True, padx=5)
+submit_button = ttk.Button(new_spelling_frame, text="Submit", command=update_player_name, style='TButton')
+submit_button.pack(side='left', padx=5)
 
 
 def fetch_statistics():
