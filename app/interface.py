@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import font as tkfont
 import pandas as pd
 from PIL import Image, ImageTk
 import os
@@ -10,12 +11,14 @@ db = DBConnector()
 result_tree = None
 root = None
 tab_search = None
+tab_play_by_play = None
 currentTable = None
 currentNHand = None
 currentSHand = None
 currentEHand = None
 currentWHand = None
 currentTricks = None
+global bridge_app 
 
 
 # Function to update the result view
@@ -218,22 +221,16 @@ def on_tree_selection(event):
             table_id_index = columns.index('TableID')
             table_id = row_data[table_id_index]
             print(f"Selected TableID: {table_id}")  # Or perform other actions with the TableID
+            currentTable = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
+            currentNHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (3, table_id))
+            currentSHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (1, table_id))
+            currentEHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (4, table_id))
+            currentWHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (2, table_id))
+            currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
 
-        currentTable = db.execute_query("SELECT * FROM TableEntity WHERE TableID = %s"% (table_id,))
-        print(currentTable)
-        currentNHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (3, table_id))
-        print(currentNHand)
-        currentSHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (1, table_id))
-        print(currentSHand)
-        currentEHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (4, table_id))
-        print(currentEHand)
-        currentWHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (2, table_id))
-        print(currentWHand)
-        currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
-        print(currentTricks)
-
-        del bridge_app
-        bridge_app = BridgeGameApp(tab_play_by_play)
+        if 'bridge_app' in globals() and bridge_app is not None:
+            del bridge_app
+        bridge_app = BridgeGameApp(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
 
 result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
 
@@ -245,81 +242,214 @@ result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
 tab_play_by_play = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_play_by_play, text="Play-by-Play")
 
-class BridgeGameApp:
-    def __init__(self, frame):
-        # Load card images
-        self.card_images = self.load_card_images()
+script_dir = os.path.dirname(os.path.abspath(__file__))
+cards_folder = 'assets/cards'
+cards_path = os.path.join(script_dir, cards_folder)
 
+class BridgeGameApp:
+    def __init__(self, currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks):
+        self.currentTricks = currentTricks
         # Initialize game state
         self.current_play = 0
+        # Define the font to use for card display
+        self.card_font = tk.font.Font(family='Helvetica', size=12, weight='bold')
 
-        # Create buttons
-        self.back_button = tk.Button(root, text="Back", command=self.move_back)
-        self.back_button.pack(side=tk.LEFT)
+        # Create a container frame within the notebook tab
+        self.container_frame = tk.Frame(tab_play_by_play, background='#2F4F4F')
+        self.container_frame.pack(expand=True, fill=tk.BOTH)
+        
+        # Configure the container grid
+        self.container_frame.grid_rowconfigure(1, weight=2)
+        self.container_frame.grid_columnconfigure(1, weight=2)
+        for i in [0, 2]:
+            self.container_frame.grid_rowconfigure(i, weight=1)
+            self.container_frame.grid_columnconfigure(i, weight=1)
+        
+        # Define the player frames
+        self.north_frame = tk.Frame(self.container_frame, bg='light gray', width=200, height=200)
+        self.east_frame = tk.Frame(self.container_frame, bg='light gray', width=100, height=200)
+        self.south_frame = tk.Frame(self.container_frame, bg='light gray', width=200, height=200)
+        self.west_frame = tk.Frame(self.container_frame, bg='light gray', width=100, height=200)
+        self.center_frame = tk.Frame(self.container_frame, bg='white', width=200, height=200)
 
-        self.next_button = tk.Button(root, text="Next", command=self.move_next)
-        self.next_button.pack(side=tk.RIGHT)
+        self.player_frames = {
+            1: self.north_frame,
+            2: self.east_frame,
+            3: self.south_frame,
+            4: self.west_frame
+        }
+        
+        # Prevent the frames from shrinking smaller than their contents
+        for frame in [self.north_frame, self.east_frame, self.south_frame, self.west_frame, self.center_frame]:
+            frame.grid_propagate(False)
+        
+        # Place the frames in the grid
+        self.north_frame.grid(row=0, column=1, sticky='ew')
+        self.east_frame.grid(row=1, column=2, sticky='ns')
+        self.south_frame.grid(row=2, column=1, sticky='ew')
+        self.west_frame.grid(row=1, column=0, sticky='ns')
+        self.center_frame.grid(row=1, column=1, sticky='nsew')
 
-        # Create a frame to display cards
-        self.frame = tk.Frame(root)
-        self.frame.pack()
+        self.container_frame.grid_rowconfigure(0, weight=1, minsize=100)
+        self.container_frame.grid_rowconfigure(1, weight=2, minsize=300)
+        self.container_frame.grid_rowconfigure(2, weight=1, minsize=100)
+
+        self.container_frame.grid_columnconfigure(0, weight=1, minsize=100)
+        self.container_frame.grid_columnconfigure(1, weight=2, minsize=300)
+        self.container_frame.grid_columnconfigure(2, weight=1, minsize=100)
+
+        # Sample data
+        self.hands = {
+            0: currentNHand[0],
+            1: currentEHand[0],
+            2: currentSHand[0],
+            3: currentWHand[0],
+        }
+
+        # Display initial hands
+        self.display_hand(self.north_frame, self.hands[0], horizontal=True)
+        self.display_hand(self.east_frame, self.hands[1], horizontal=False)
+        self.display_hand(self.south_frame, self.hands[2], horizontal=True)
+        self.display_hand(self.west_frame, self.hands[3], horizontal=False)
 
         # Placeholder for card labels (to display card images)
-        self.card_labels = []
+        self.center_cards = []
 
         # Initialize or load a game state here
-        self.game_state = [...]
+        self.center_label = tk.Label(self.center_frame, text='', font=self.card_font, bg='white')
+        self.center_label.pack(expand=True)
 
-    def load_card_images(self):
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        cards_folder = 'assets/cards'
-        cards_path = os.path.join(script_dir, cards_folder)
-        card_images = {}
-        #Heart is 2, Diamonad is 4, Spade is 5, Club is 7
-        for suit in ['S', 'D', 'C', 'H']:
-            for value in ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']:
-                card_name = suit + value
-                image_path = os.path.join(cards_path, card_name + '.png')
-                image = Image.open(image_path)
-                card_images[card_name] = ImageTk.PhotoImage(image)
-        return card_images
+         # Add navigation buttons
+        self.back_button = tk.Button(self.container_frame, text="Back", command=self.move_back)
+        self.back_button.grid(row=3, column=0, sticky='ew')
 
-    def display_cards(self):
-        # Clear existing cards
-        for label in self.card_labels:
-            label.destroy()
+        self.next_button = tk.Button(self.container_frame, text="Next", command=self.move_next)
+        self.next_button.grid(row=3, column=2, sticky='ew')
 
-        # Display cards for the current play
-        cards = self.game_state[self.current_play]
-        self.card_labels = []
-        for card in cards:
-            label = tk.Label(self.card_frame, image=self.card_images[card])
-            label.pack(side=tk.LEFT)
-            self.card_labels.append(label)
+        # Initialize the current play index
+        self.current_play_index = 0
+
+    def update_center(self, cards_played, remove=False):
+        # Add or remove cards from the center display based on the direction of the move
+        if remove:
+            # If moving backward, remove the last played cards from the display
+            self.center_cards = self.center_cards[:-len(cards_played)]
+        else:
+            # If moving forward, add the new cards to the display
+            self.center_cards.extend(list(cards_played))
+
+        # Update the center label with the current cards
+        center_text = ''.join(self.center_cards) + ' '
+        self.center_label.config(text=center_text)
+
+    def display_hand(self, frame, hand_tuple, horizontal=True):
+    # Clear the frame first
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        # Convert the hand tuple into a string with suit symbols
+        suits = ['♠', '♥', '♦', '♣']
+        hand_strings = [f"{suits[i]}{cards}" for i, cards in enumerate(hand_tuple[:4])]
+
+        if horizontal:
+            # For horizontal frames (North and South), use one label for each suit
+            for suit_str in hand_strings:
+                label = tk.Label(frame, text=suit_str, font=self.card_font, bg='light gray')
+                label.pack(side=tk.LEFT, anchor='w', padx=5)
+        else:
+            frame.update_idletasks()
+
+            # Use the updated frame dimensions for the canvas
+            canvas_width = frame.winfo_width()
+            canvas_height = frame.winfo_height()
+            canvas = tk.Canvas(frame, bg='light gray', width=canvas_width, height=canvas_height)
+            canvas.pack(side=tk.TOP, fill='both', expand=True)
+            
+            # Calculate the starting y position to center the suits vertically
+            start_y = (canvas_height - (len(hand_strings) * 20)) // 2
+            y_position = start_y
+            for suit_str in hand_strings:
+                canvas.create_text(canvas_width // 2, y_position, text=suit_str, font=self.card_font, anchor="center")
+                y_position += 20  # Space between suits
+
+    def update_hand(self, player, cards_played, remove=False):
+        player = int(player-1)
+        hand_tuple = self.hands.get(player)
+        if hand_tuple is None:
+            # Handle error: no hand found for this player number
+            print(f"No hand found for player {player}")
+            return
+        
+        hand_list = list(hand_tuple)
+
+        for card in cards_played:
+            suit_index = 'SHDC'.index(card[0])  
+            suit_hand = hand_list[suit_index]
+            if remove:
+                hand_list[suit_index] = suit_hand + card[1:]
+            else:
+                hand_list[suit_index] = suit_hand.replace(card[1:], '')
+        self.hands[player] = tuple(hand_list)
+        print(self.player_frames)
+        print(player)
+        self.display_hand(self.player_frames[player], self.hands[player], horizontal=player in [1, 3])
+
+    """
+    def play_game(self, plays):
+        # Loop through the plays and update hands accordingly
+        for play in plays.values():
+            player, cards_played = play[2], play[4]
+            self.update_hand(player, [cards_played[i:i+2] for i in range(0, len(cards_played), 2)])"""
 
     def move_next(self):
-        if self.current_play < len(self.game_state) - 1:
-            self.current_play += 1
-            self.display_cards()
+        if self.current_play_index < len(self.currentTricks) - 1:
+            self.current_play_index += 1
+            self.play_current()
 
     def move_back(self):
-        if self.current_play > 0:
-            self.current_play -= 1
-            self.display_cards()
+        if self.current_play_index > 0:
+            self.current_play_index -= 1
+            self.play_current(backward=True)
+
+    def find_player_with_card(self, card):
+        suit_order = {'S': 0, 'H': 1, 'D': 2, 'C': 3}
+        for player, hand_tuple in self.hands.items():
+            suit = card[0]  # The suit of the card ('S', 'H', 'D', 'C')
+            value = card[1:]  # The value of the card ('6', 'A', 'Q', etc.)
+
+            suit_index = suit_order.get(suit)  # Get the index of the suit in the tuple
+            if suit_index is not None and value in hand_tuple[suit_index]:
+                return player
+        return None  # Return None if the card is not found in any hand
+
+    def play_current(self, backward=False):
+        # Retrieve the current play
+        current_play = self.currentTricks[self.current_play_index]
+
+        # Determine the player and the cards played
+        player, cards_played = current_play[2], current_play[4]
+
+        # If we are moving backward, remove the cards from the center and add them back to the player's hand
+        # If we are moving forward, remove the cards from the player's hand and add them to the center
+        if backward:
+            self.update_center(cards_played, remove=True)
+            for card in cards_played:
+                print(card)
+                playerscard = self.find_player_with_card(card)
+                print(playerscard)
+                self.update_hand(player, playerscard, remove=True)
+        else:
+            self.update_center(cards_played, remove=False)
+            for card in cards_played:
+                print(card)
+                playerscard = self.find_player_with_card(card)
+                self.update_hand(player, playerscard, remove=False)
+
 
 
 # Tab 3: Statistics Details
 tab_statistics = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_statistics, text="Statistics")
-
-# Tab 4: Upload File
-tab_upload = ttk.Frame(notebook, style='TFrame')
-notebook.add(tab_upload, text="Upload")
-
-# Tab 5: Edit
-tab_edit = ttk.Frame(notebook, style='TFrame')
-notebook.add(tab_edit, text="Edit")
-
 
 # Tab 4: Upload File
 tab_upload = ttk.Frame(notebook, style='TFrame')
@@ -345,10 +475,7 @@ def update_statistics_view():
         ttk.Label(tab_statistics, text=str(stat_value), style='TLabel').grid(row=i, column=1, sticky='W', padx=5, pady=5)
 
 
-bridge_app = BridgeGameApp(tab_play_by_play)
+#bridge_app = BridgeGameApp(tab_play_by_play)
 root.mainloop()
-
-
-
 
 
