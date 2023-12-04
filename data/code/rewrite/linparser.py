@@ -16,8 +16,7 @@ if os.path.isfile("parser_config.json"):
     b_id = config["b_id"]
     t_id = config["t_id"]
 
-
-def read_file(filename):
+def read_file(filename: str):
     if not (os.path.isfile(filename)): raise Exception("invalid path")
     # open file
     with open(filename, mode='r', encoding='utf-8') as fd:
