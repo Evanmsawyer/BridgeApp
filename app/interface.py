@@ -643,11 +643,11 @@ def fetch_statistics(currentTable, currentNHand, currentSHand, currentEHand, cur
     
     # Fetch statistics for each player
     for i in range(0, 4):
-        team_name = list(plays_table[i])[0]
-        player_name = list(plays_table[i])[1]
+        player_name = list(plays_table[i])[0]
+        team_name = list(plays_table[i])[1]
         key = f"{team_name}{player_name}"
         total_tricks = db.execute_query("SELECT COUNT(*) FROM (SELECT TableID, Seat FROM BridgeDB.PlaysTable WHERE PlayerName = '%s' AND TeamName = '%s' AND TableID = %s) AS T NATURAL JOIN BridgeDB.Trick WHERE T.Seat = WinningSeat;"%(player_name, team_name, table_id,))
-        player_stats[f"{player_name} on team {team_name} has Total Tricks "] = total_tricks
+        player_stats[f"{player_name} on team {team_name} has Total Tricks "] = total_tricks[0][0]
 
     return player_stats
     #return {
