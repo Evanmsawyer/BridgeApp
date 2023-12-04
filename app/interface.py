@@ -49,6 +49,24 @@ class SelectCriteria(enum.Enum):
             SelectCriteria.Score: "Score (Low, High)",
         }
         return descriptions[self]
+    
+    @property
+    def procedure(self):
+        procedures = {
+            SelectCriteria.Player: "PlayerSearch",
+            SelectCriteria.HCP: "HCPSearchInRange",
+            SelectCriteria.FirstBid: "OpeningBidSearch",
+            SelectCriteria.LastBid: "EndingBidSearch",
+            SelectCriteria.BoardID: "BoardSearch",
+            SelectCriteria.Tournament: "TableInTournament",
+            SelectCriteria.Tricks: "TotalTricksByPlayer",
+            SelectCriteria.Slams: "SlamBidAndMade",
+            SelectCriteria.PlayersByTeam: "PlayerSearchByTeam",
+            SelectCriteria.Seat: "GetSeat",
+            SelectCriteria.Dealer: "DealerSearch",
+            SelectCriteria.Score: "RawScoreSearch",
+        }
+        return procedures[self]
 
 # Function to update the result view
 def update_result_view(columns, data):
@@ -100,53 +118,54 @@ def execute_search():
     for search in search_text.split('"'):
         if ':' in search:
             procedure_name, parameters = search.replace('"', '').split(':', 1)  # Removing quotes and splitting on the first colon
-             
+            parameters = tuple(parameters.split(','))
+            
             print(f"Procedure: {procedure_name}, Parameters: {parameters}")
             if procedure_name == SelectCriteria.Tournament.value: 
                 #Test Data: 2013 USBC USA2 Final
-                procedure_name = "TableInTournament"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Tournament.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.Tricks.value:
                 #Test Data: 
-                procedure_name = "TotalTricksByPlayer"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Tricks.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.HCP.value:
-                procedure_name = "HCPSearchInRange"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.HCP.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.LastBid.value:
-                procedure_name = "EndingBidSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.LastBid.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.BoardID.value:
-                procedure_name = "BoardSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.BoardID.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.Player.value:
-                procedure_name = "PlayerSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Player.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.Dealer.value:
-                procedure_name = "DealerSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Dealer.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.PlayersByTeam.value:
-                procedure_name = "PlayerSearchByTeam"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.PlayersByTeam.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.Seat.value: 
-                procedure_name = "GetSeat"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Seat.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.Score.value:
-                procedure_name = "RawScoreSearch"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Score.procedure
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
                 update_result_view(columns, data)
             elif procedure_name == SelectCriteria.Slams.value: 
-                procedure_name = "SlamBidAndMade"
-                columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
+                procedure_name = SelectCriteria.Slams.procedure
+                columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
                 update_result_view(columns, data)
             else:
                 print("Invalid procedure name:", procedure_name)

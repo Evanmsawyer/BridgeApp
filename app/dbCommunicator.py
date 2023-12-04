@@ -107,6 +107,38 @@ class DBConnector:
         """
         cursor = self.connection.cursor()
         cursor.callproc(query, parameters)
+
+    def execute_stored_procedure_with_no_parameters(self, procedure_name, auto_commit=False):
+        """
+        Executes a stored proedure
+
+        Args:
+            procedure_name (str): The filename for the stored procedure 
+            connection (mysql.connector.connection_cext.CMySQLConnection): The connection to the database
+            auto_commit (bool, optional): Whether to commit the query. Defaults to True.
+        Returns:
+            cursor: mysql.connector.cursor_cext.CMySQLCursor object        
+        Raises:
+            Error: If the store procedure cannot be executed
+        """
+        try:
+            with self.connection.cursor(dictionary=True) as cursor:
+                cursor.callproc(procedure_name)
+
+                # Fetching result set
+                result = []
+                for result_set in cursor.stored_results():
+                    result.extend(result_set.fetchall())
+
+                column_names = list(result[0].keys()) if result else []
+
+                if auto_commit:
+                    self.connection.commit()
+
+                return column_names, result
+        except Exception as e:
+            self.connection.rollback()
+            raise e
         
     def execute_stored_procedure(self, procedure_name, parameters=(), auto_commit=False):
         """
