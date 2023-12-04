@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import filedialog
 import pandas as pd
 from PIL import Image, ImageTk
 import os
@@ -367,18 +368,52 @@ notebook.add(tab_statistics, text="Statistics")
 tab_upload = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_upload, text="Upload")
 
+#Function to handle file upload
+def upload_file():
+    file_path = filedialog.askopenfilename()
+    if file_path:
+        # call function to upload file to database
+        print("insert the data")
+
+# Upload File Description
+upload_description = ttk.Label(tab_upload, text="You can upload data for bridge tournaments using .lin files only", style='TLabel')
+upload_description.pack(pady=(20, 0))
+
+# Upload File Button
+upload_button = ttk.Button(tab_upload, text="Upload File", command=upload_file, style='TButton')
+upload_button.pack(pady=10)
+
 # Tab 5: Edit
 tab_edit = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_edit, text="Edit")
 
+def update_player_name():
+    print("update player name")
 
-# Tab 4: Upload File
-tab_upload = ttk.Frame(notebook, style='TFrame')
-notebook.add(tab_upload, text="Upload")
+def check_for_player_name(name):
+    print(name)
 
-# Tab 5: Edit
-tab_edit = ttk.Frame(notebook, style='TFrame')
-notebook.add(tab_edit, text="Edit")
+# Update Description
+update_description = ttk.Label(tab_edit, text="If you are a player who would like to edit their name in the database, you can do so below.", style='TLabel')
+update_description.pack(pady=(20, 0))
+
+current_spelling_frame = ttk.Frame(tab_edit, style='TFrame')
+current_spelling_frame.pack(fill='x', pady=10)
+current_spelling_label = ttk.Label(current_spelling_frame, text="Current Spelling:", style='TLabel')
+current_spelling_label.pack(side='left', padx=5)
+current_spelling_entry = ttk.Entry(current_spelling_frame)
+current_spelling_entry.pack(side='left', fill='x', expand=True, padx=5)
+search_button = ttk.Button(current_spelling_frame, text="Search", command=lambda: check_for_player_name(current_spelling_entry.get()), style='TButton')
+search_button.pack(side='left', padx=5)
+
+new_spelling_frame = ttk.Frame(tab_edit, style='TFrame')
+new_spelling_frame.pack(fill='x', pady=10)
+new_spelling_label = ttk.Label(new_spelling_frame, text="New Spelling:", style='TLabel')
+new_spelling_label.pack(side='left', padx=5)
+new_spelling_entry = ttk.Entry(new_spelling_frame)
+new_spelling_entry.pack(side='left', fill='x', expand=True, padx=5)
+submit_button = ttk.Button(new_spelling_frame, text="Submit", command=update_player_name, style='TButton')
+submit_button.pack(side='left', padx=5)
 
 
 def fetch_statistics():
