@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 import os
 import json
 from dbCommunicator import DBConnector
+import enum
 
 db = DBConnector()
 result_tree = None
@@ -17,6 +18,37 @@ currentEHand = None
 currentWHand = None
 currentTricks = None
 
+class SelectCriteria(enum.Enum):
+    Player = "Player"
+    HCP = "HCP"
+    FirstBid = "FirstBid"
+    LastBid = "LastBid"
+    BoardID = "BoardID"
+    Tournament = "Tournament"
+    Tricks = "Tricks"
+    Slams = "Slams"
+    PlayersByTeam = "PlayersByTeam"
+    Seat = "Seat"
+    Dealer = "Dealer"
+    Score = "Score"
+
+    @property
+    def description(self):
+        descriptions = {
+            SelectCriteria.Player: "Player (Name)",
+            SelectCriteria.HCP: "HCP (High, Low)",
+            SelectCriteria.FirstBid: "First Bid (OpeningBid)",
+            SelectCriteria.LastBid: "Last Bid (EndingBid)",
+            SelectCriteria.BoardID: "Board Search (BoardID)",
+            SelectCriteria.Tournament: "Tournament (Name)",
+            SelectCriteria.Tricks: "Tricks (TableID)",
+            SelectCriteria.Slams: "Slams (N/A)",
+            SelectCriteria.PlayersByTeam: "Players By Team (Team Name)",
+            SelectCriteria.Seat: "Seat (TableID, Player Name, Team Name)",
+            SelectCriteria.Dealer: "Dealer (Number)",
+            SelectCriteria.Score: "Score (Low, High)",
+        }
+        return descriptions[self]
 
 # Function to update the result view
 def update_result_view(columns, data):
@@ -55,7 +87,7 @@ class ScrollableFrame(ttk.Frame):
 
 # Function to add criteria to the search bar
 def add_to_search():
-    criteria = criteria_combobox.get()
+    criteria = criteria_combobox.get().split(' (')[0]
     value = criteria_value_entry.get()
     existing_text = search_bar.get()
     new_search_text = f'{existing_text} "{criteria}:{value}"' if existing_text else f'"{criteria}:{value}"'
@@ -68,50 +100,51 @@ def execute_search():
     for search in search_text.split('"'):
         if ':' in search:
             procedure_name, parameters = search.replace('"', '').split(':', 1)  # Removing quotes and splitting on the first colon
+             
             print(f"Procedure: {procedure_name}, Parameters: {parameters}")
-            if procedure_name == "Tournament":
+            if procedure_name == SelectCriteria.Tournament.value: 
                 #Test Data: 2013 USBC USA2 Final
                 procedure_name = "TableInTournament"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Tricks":
+            elif procedure_name == SelectCriteria.Tricks.value:
                 #Test Data: 
                 procedure_name = "TotalTricksByPlayer"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "HCP":
+            elif procedure_name == SelectCriteria.HCP.value:
                 procedure_name = "HCPSearchInRange"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Last Bid":
+            elif procedure_name == SelectCriteria.LastBid.value:
                 procedure_name = "EndingBidSearch"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Board ID":
+            elif procedure_name == SelectCriteria.BoardID.value:
                 procedure_name = "BoardSearch"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Player":
+            elif procedure_name == SelectCriteria.Player.value:
                 procedure_name = "PlayerSearch"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Dealer":
+            elif procedure_name == SelectCriteria.Dealer.value:
                 procedure_name = "DealerSearch"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Players By Team":
+            elif procedure_name == SelectCriteria.PlayersByTeam.value:
                 procedure_name = "PlayerSearchByTeam"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Seat":
+            elif procedure_name == SelectCriteria.Seat.value: 
                 procedure_name = "GetSeat"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Score":
+            elif procedure_name == SelectCriteria.Score.value:
                 procedure_name = "RawScoreSearch"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
-            elif procedure_name == "Slams":
+            elif procedure_name == SelectCriteria.Slams.value: 
                 procedure_name = "SlamBidAndMade"
                 columns, data = db.execute_stored_procedure(procedure_name, (parameters,))
                 update_result_view(columns, data)
@@ -170,9 +203,8 @@ search_input_frame.pack(fill='x', expand=False, pady=15)
 criteria_label = ttk.Label(search_input_frame, text="Select Criteria:", font=custom_font, style='TLabel')
 criteria_label.pack(side='left', padx=5, pady=5)
 
-criteria_options = ['Player', 'HCP', 'First Bid', 'Last Bid', 
-                    'Board ID', 'Tournament', 'Tricks', 'Slams', 'Players By Team', 
-                    'Seat', 'Dealer', 'Score']
+criteria_options = [c.description for c in SelectCriteria]
+
 criteria_options.sort()
 criteria_combobox = ttk.Combobox(search_input_frame, values=criteria_options, state='readonly', font=custom_font)
 criteria_combobox.pack(side='left', padx=criteria_options.__len__(), pady=criteria_options.__len__())
