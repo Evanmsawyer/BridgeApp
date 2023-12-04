@@ -8,6 +8,13 @@ import os
 import json
 from dbCommunicator import DBConnector
 import enum
+import sys
+import os
+
+current_script_directory = os.path.dirname(__file__)
+adjacent_directory_path = os.path.join(current_script_directory, '..', 'data')
+sys.path.insert(0, adjacent_directory_path)
+import linparser
 
 db = DBConnector()
 result_tree = None
@@ -20,7 +27,6 @@ currentSHand = None
 currentEHand = None
 currentWHand = None
 currentTricks = None
-global bridge_app 
 
 class SelectCriteria(enum.Enum):
     Player = "Player"
@@ -279,10 +285,16 @@ def on_tree_selection(event):
             currentEHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (4, table_id))
             currentWHand = db.execute_query("SELECT Spades, Hearts, Diamonds, Clubs, HighCardPoints from Hands natural join TableEntity where Position = %s and TableID = %s"% (2, table_id))
             currentTricks = db.execute_query("SELECT * FROM Trick WHERE Trick.TableID = %s ORDER BY Trick.TrickNumber ASC"% (table_id,))
-
-        if 'bridge_app' in globals() and bridge_app is not None:
-            del bridge_app
-        bridge_app = BridgeGameApp(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
+            bridge_app = BridgeGameApp(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
+            update_statistics_view(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
+        
+        if "PlayerName" or "TeamName" in columns:
+            PlayerName_index = columns.index('Name')
+            PlayerName_id = row_data[PlayerName_index]
+            TeamName_index = columns.index('TeamName')
+            TeamName_id = row_data[TeamName_index]
+            print(f"Selected TableID: {PlayerName_id} on team {TeamName_id}")  # Or perform other actions with the TableID
+            
 
 result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
 
@@ -297,19 +309,31 @@ notebook.add(tab_play_by_play, text="Play-by-Play")
 script_dir = os.path.dirname(os.path.abspath(__file__))
 cards_folder = 'assets/cards'
 cards_path = os.path.join(script_dir, cards_folder)
+pos_dic = {
+    0 : "S",
+    1 : "W",
+    2 : "N",
+    3 : "E"
+}
 
-class BridgeGameApp:
+class BridgeGameApp:      
     def __init__(self, currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks):
+        for widget in tab_play_by_play.winfo_children():
+            widget.destroy()
         self.currentTricks = currentTricks
         # Initialize game state
         self.current_play = 0
+        self.tricks_north_south = 0
+        self.tricks_east_west = 0
+        last_bid = currentTable[0][5]
+
         # Define the font to use for card display
-        self.card_font = tk.font.Font(family='Helvetica', size=12, weight='bold')
+        self.card_font = tk.font.Font(family='Helvetica', size=16, weight='bold')
 
         # Create a container frame within the notebook tab
         self.container_frame = tk.Frame(tab_play_by_play, background='#2F4F4F')
         self.container_frame.pack(expand=True, fill=tk.BOTH)
-        
+
         # Configure the container grid
         self.container_frame.grid_rowconfigure(1, weight=2)
         self.container_frame.grid_columnconfigure(1, weight=2)
@@ -324,11 +348,15 @@ class BridgeGameApp:
         self.west_frame = tk.Frame(self.container_frame, bg='light gray', width=100, height=200)
         self.center_frame = tk.Frame(self.container_frame, bg='white', width=200, height=200)
 
+        # Initialize the Text widget for center cards
+        self.center_label = tk.Label(self.center_frame, text='', font=self.card_font, bg='white')
+        self.center_label.pack(expand=True, fill=tk.BOTH)
+
         self.player_frames = {
-            1: self.north_frame,
-            2: self.east_frame,
-            3: self.south_frame,
-            4: self.west_frame
+            0: self.north_frame,
+            1: self.east_frame,
+            2: self.south_frame,
+            3: self.west_frame
         }
         
         # Prevent the frames from shrinking smaller than their contents
@@ -350,12 +378,19 @@ class BridgeGameApp:
         self.container_frame.grid_columnconfigure(1, weight=2, minsize=300)
         self.container_frame.grid_columnconfigure(2, weight=1, minsize=100)
 
+        print(currentNHand[0])
         # Sample data
         self.hands = {
             0: currentNHand[0],
             1: currentEHand[0],
             2: currentSHand[0],
             3: currentWHand[0],
+        }
+        self.handsReverse = {
+            0: ('', '',  '', '', ''),
+            1: ('', '',  '', '', ''),
+            2: ('', '',  '', '', ''),
+            3: ('', '',  '', '', ''),
         }
 
         # Display initial hands
@@ -367,9 +402,20 @@ class BridgeGameApp:
         # Placeholder for card labels (to display card images)
         self.center_cards = []
 
+        # Initialize labels for the trick counters
+        self.tricks_ns_label = tk.Label(self.container_frame, text='NS: 0', font=self.card_font, bg='light gray')
+        self.tricks_ns_label.grid(row=0, column=0, sticky='nw')
+
+        self.tricks_ew_label = tk.Label(self.container_frame, text='EW: 0', font=self.card_font, bg='light gray')
+        self.tricks_ew_label.grid(row=0, column=2, sticky='ne')
+
+        # Final Bid label
+        final_bid_label = tk.Label(self.container_frame, text=f"Final bid: {last_bid}", font=self.card_font, bg='light gray')
+        final_bid_label.grid(row=0, column=1, sticky='n')
+
         # Initialize or load a game state here
         self.center_label = tk.Label(self.center_frame, text='', font=self.card_font, bg='white')
-        self.center_label.pack(expand=True)
+        self.center_label.pack(expand=True, fill=tk.BOTH, anchor='center')
 
          # Add navigation buttons
         self.back_button = tk.Button(self.container_frame, text="Back", command=self.move_back)
@@ -378,21 +424,46 @@ class BridgeGameApp:
         self.next_button = tk.Button(self.container_frame, text="Next", command=self.move_next)
         self.next_button.grid(row=3, column=2, sticky='ew')
 
+        self.north_frame.pack_propagate(False)
+        self.east_frame.pack_propagate(False)
+        self.south_frame.pack_propagate(False)
+        self.west_frame.pack_propagate(False)
+        self.center_frame.pack_propagate(False)
+
         # Initialize the current play index
         self.current_play_index = 0
 
-    def update_center(self, cards_played, remove=False):
+    def update_center(self, player_with_cards, cards_played, replace=False):
         # Add or remove cards from the center display based on the direction of the move
-        if remove:
-            # If moving backward, remove the last played cards from the display
-            self.center_cards = self.center_cards[:-len(cards_played)]
+        #self.center_text.delete('1.0', tk.END)
+        if len(player_with_cards) != 4:
+            return
+        for widget in self.center_frame.winfo_children():
+            widget.destroy()
+
+        if replace:
+            # Replace the center cards with the new set
+            self.center_cards = list(cards_played)
         else:
             # If moving forward, add the new cards to the display
-            self.center_cards.extend(list(cards_played))
+            self.center_cards.extend(cards_played)
 
-        # Update the center label with the current cards
-        center_text = ''.join(self.center_cards) + ' '
-        self.center_label.config(text=center_text)
+        savedPos = {}
+        # Update the center Label widget with the current cards
+        for card in self.center_cards:
+            # Find the player who played the card
+           # print(card)
+            #player_with_card = self.find_player_with_card(card)
+            player_with_card=player_with_cards[card]
+
+            # Create a label for the player and pack it
+            player_label = tk.Label(self.center_frame, text=f"Player {player_with_card}", font=self.card_font, bg='white')
+            player_label.pack()
+
+            # Create a label for the card and pack it
+            card_label = tk.Label(self.center_frame, text=card, font=self.card_font, bg='white')
+            card_label.pack()
+
 
     def display_hand(self, frame, hand_tuple, horizontal=True):
     # Clear the frame first
@@ -424,27 +495,46 @@ class BridgeGameApp:
                 canvas.create_text(canvas_width // 2, y_position, text=suit_str, font=self.card_font, anchor="center")
                 y_position += 20  # Space between suits
 
-    def update_hand(self, player, cards_played, remove=False):
-        player = int(player-1)
+    def update_hand(self, player, card_played, remove=False):
+        print(player)
+        player = int(player)
         hand_tuple = self.hands.get(player)
+        hand_tuplerev = self.handsReverse.get(player)
+
         if hand_tuple is None:
             # Handle error: no hand found for this player number
             print(f"No hand found for player {player}")
             return
         
         hand_list = list(hand_tuple)
+        hand_listrev = list(hand_tuplerev)
+        # Debug print to check the card
+        print(f"Card being updated: {card_played}")
 
-        for card in cards_played:
-            suit_index = 'SHDC'.index(card[0])  
-            suit_hand = hand_list[suit_index]
-            if remove:
-                hand_list[suit_index] = suit_hand + card[1:]
-            else:
-                hand_list[suit_index] = suit_hand.replace(card[1:], '')
+        try:
+            suit_index = 'SHDC'.index(card_played[0])
+        except ValueError:
+            print(f"Invalid card suit: {card_played[0]}")
+            return  # Exit the method if the suit is not valid
+        #print(hand_listrev)
+        suit_hand = hand_list[suit_index]
+        suit_hand_rev = hand_listrev[suit_index]
+        if remove:
+            # Moving backward: Add the card back to the player's main hand
+            # and remove it from the reverse hand
+            hand_list[suit_index] = suit_hand + card_played[1:]
+            hand_listrev[suit_index] = suit_hand_rev.replace(card_played[1:], '', 1)
+        else:
+            # Moving forward: Remove the card from the player's main hand
+            # and add it to the reverse hand
+            hand_list[suit_index] = suit_hand.replace(card_played[1:], '', 1)
+            hand_listrev[suit_index] = suit_hand_rev + card_played[1:]
+        #print(hand_listrev)
+
         self.hands[player] = tuple(hand_list)
-        print(self.player_frames)
-        print(player)
-        self.display_hand(self.player_frames[player], self.hands[player], horizontal=player in [1, 3])
+        self.handsReverse[player] = tuple(hand_listrev)
+        #print(self.handsReverse[player])
+        self.display_hand(self.player_frames[player], self.hands[player], horizontal=player in [0, 2])
 
     """
     def play_game(self, plays):
@@ -454,18 +544,26 @@ class BridgeGameApp:
             self.update_hand(player, [cards_played[i:i+2] for i in range(0, len(cards_played), 2)])"""
 
     def move_next(self):
+        print(self.current_play_index)
         if self.current_play_index < len(self.currentTricks) - 1:
             self.current_play_index += 1
             self.play_current()
+        else:
+            self.end_label = tk.Label(self.center_frame, text="Rest of Tricks Claimed" , font=self.card_font, bg='white')
+            self.end_label.pack()
 
     def move_back(self):
-        if self.current_play_index > 0:
+        print(self.current_play_index)
+        if self.current_play_index > 1:
             self.current_play_index -= 1
             self.play_current(backward=True)
 
-    def find_player_with_card(self, card):
+    def find_player_with_card(self, card, reverse=False):
         suit_order = {'S': 0, 'H': 1, 'D': 2, 'C': 3}
-        for player, hand_tuple in self.hands.items():
+        handsRef = self.hands
+        if reverse == True:
+            handsRef = self.handsReverse
+        for player, hand_tuple in handsRef.items():
             suit = card[0]  # The suit of the card ('S', 'H', 'D', 'C')
             value = card[1:]  # The value of the card ('6', 'A', 'Q', etc.)
 
@@ -478,51 +576,93 @@ class BridgeGameApp:
         # Retrieve the current play
         current_play = self.currentTricks[self.current_play_index]
 
-        # Determine the player and the cards played
-        player, cards_played = current_play[2], current_play[4]
+        cards_played = current_play[4]
+        
+        # Extract information from the current play
+        trick_number, table_id, first_seat, winning_seat, cards_played = current_play
 
-        # If we are moving backward, remove the cards from the center and add them back to the player's hand
-        # If we are moving forward, remove the cards from the player's hand and add them to the center
+        # Split the cards_played string into individual cardsself.hands
+        cards = [cards_played[i:i+2] for i in range(0, len(cards_played), 2)]
+
+        savedPos={}
         if backward:
-            self.update_center(cards_played, remove=True)
-            for card in cards_played:
+            # If moving backward, remove the last played cards from the display
+            # and add them back to each player's hand
+            for card in cards:
                 print(card)
-                playerscard = self.find_player_with_card(card)
-                print(playerscard)
-                self.update_hand(player, playerscard, remove=True)
-        else:
-            self.update_center(cards_played, remove=False)
-            for card in cards_played:
-                print(card)
-                playerscard = self.find_player_with_card(card)
-                self.update_hand(player, playerscard, remove=False)
+                #self.update_center(None, cards, replace=True)
+                player_with_card = self.find_player_with_card(card, True) 
+                print(player_with_card)
+                savedPos[card] = pos_dic[player_with_card]
 
+                if player_with_card is not None:
+                    self.update_hand(player_with_card, card, remove=True)
+                    self.update_center(savedPos, cards, replace=True)
+            # Decrement the trick counter for the team that won this trick
+            self.update_trick_counters(winning_seat, decrement=True)
+        else:
+            # If moving forward, remove each card from the respective player's hand
+            # and replace the cards in the center
+            for card in cards:
+                #self.update_center(None, cards, replace=True)
+                player_with_card = self.find_player_with_card(card) 
+                savedPos[card] = pos_dic[player_with_card]
+
+                if player_with_card is not None:
+                    self.update_hand(player_with_card, card)
+                    self.update_center(savedPos, cards, replace=True)
+            # Increment the trick counter for the team that won this trick
+            self.update_trick_counters(winning_seat, decrement=False)
+
+    def update_trick_counters(self, winning_seat, decrement=False):
+        # Determine the team that won the trick
+        if winning_seat in [1, 3]:  # North or South
+            if decrement:
+                self.tricks_north_south = max(0, self.tricks_north_south - 1)
+            else:
+                self.tricks_north_south += 1
+            self.tricks_ns_label.config(text=f'NS: {self.tricks_north_south}')
+        elif winning_seat in [2, 4]:  # East or West
+            if decrement:
+                self.tricks_east_west = max(0, self.tricks_east_west - 1)
+            else:
+                self.tricks_east_west += 1
+            self.tricks_ew_label.config(text=f'EW: {self.tricks_east_west}')
 
 
 # Tab 3: Statistics Details
 tab_statistics = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_statistics, text="Statistics")
 
-# Tab 4: Upload File
-tab_upload = ttk.Frame(notebook, style='TFrame')
-notebook.add(tab_upload, text="Upload")
+def fetch_statistics(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks):
+    table_id = currentTable[0][0]
+    plays_table = db.execute_query(f"SELECT PlayerName, TeamName FROM PlaysTable WHERE TableID = {table_id}")
 
-#Function to handle file upload
-def upload_file():
-    file_path = filedialog.askopenfilename()
-    if file_path:
-        # call function to upload file to database
-        print("insert the data")
+    # Dictionary to store statistics for each player
+    player_stats = {}
+    
+    # Fetch statistics for each player
+    for i in range(0, 4):
+        team_name = list(plays_table[i])[0]
+        player_name = list(plays_table[i])[1]
+        key = f"{team_name}{player_name}"
+        total_tricks = db.execute_query("SELECT COUNT(*) FROM (SELECT TableID, Seat FROM BridgeDB.PlaysTable WHERE PlayerName = '%s' AND TeamName = '%s' AND TableID = %s) AS T NATURAL JOIN BridgeDB.Trick WHERE T.Seat = WinningSeat;"%(player_name, team_name, table_id,))
+        player_stats[f"{player_name} on team {team_name} has Total Tricks "] = total_tricks
 
-# Upload File Description
-upload_description = ttk.Label(tab_upload, text="You can upload data for bridge tournaments using .lin files only", style='TLabel')
-upload_description.pack(pady=(20, 0))
+    return player_stats
+    #return {
+        #"North Player Total Tricks": total_tricks,
+    #}
 
-# Upload File Button
-upload_button = ttk.Button(tab_upload, text="Upload File", command=upload_file, style='TButton')
-upload_button.pack(pady=10)
+# Function to update statistics view
+def update_statistics_view(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks):
+    stats = fetch_statistics(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
 
-# Tab 5: Edit
+    for i, (stat_name, stat_value) in enumerate(stats.items()):
+        ttk.Label(tab_statistics, text=f"{stat_name}:", style='TLabel').grid(row=i, column=0, sticky='W', padx=5, pady=5)
+        ttk.Label(tab_statistics, text=str(stat_value), style='TLabel').grid(row=i, column=1, sticky='W', padx=5, pady=5)
+
+# Tab 4: Edit
 tab_edit = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_edit, text="Edit")
 
@@ -554,20 +694,26 @@ new_spelling_entry.pack(side='left', fill='x', expand=True, padx=5)
 submit_button = ttk.Button(new_spelling_frame, text="Submit", command=update_player_name, style='TButton')
 submit_button.pack(side='left', padx=5)
 
+# Tab 5: Upload File
+tab_upload = ttk.Frame(notebook, style='TFrame')
+notebook.add(tab_upload, text="Upload")
 
-def fetch_statistics():
-    total_tricks = db.execute_query("SELECT COUNT(*) FROM Tricks")
-    return {
-        #"North Player Total Tricks": total_tricks,
-    }
+#Function to handle file upload
+def upload_file():
+    file_path = filedialog.askopenfilename()
+    if file_path:
+        # call function to upload file to database
+        round = linparser.read_file(file_path)
+        linparser.insert_data(round, db)
 
-# Function to update statistics view
-def update_statistics_view():
-    stats = fetch_statistics()
+# Upload File Description
+upload_description = ttk.Label(tab_upload, text="You can upload data for bridge tournaments using .lin files only", style='TLabel')
+upload_description.pack(pady=(20, 0))
 
-    for i, (stat_name, stat_value) in enumerate(stats.items()):
-        ttk.Label(tab_statistics, text=f"{stat_name}:", style='TLabel').grid(row=i, column=0, sticky='W', padx=5, pady=5)
-        ttk.Label(tab_statistics, text=str(stat_value), style='TLabel').grid(row=i, column=1, sticky='W', padx=5, pady=5)
+# Upload File Button
+upload_button = ttk.Button(tab_upload, text="Upload File", command=upload_file, style='TButton')
+upload_button.pack(pady=10)
+
 
 
 #bridge_app = BridgeGameApp(tab_play_by_play)
