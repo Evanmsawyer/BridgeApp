@@ -1,54 +1,24 @@
---Initialize the database
-CREATE DATABASE IF NOT EXISTS BridgeDB
+CREATE DATABASE IF NOT EXISTS BridgeDB;
+DROP TABLE IF EXISTS Hands;
+DROP TABLE IF EXISTS PlaysTable;
+DROP TABLE IF EXISTS Trick;
+DROP TABLE IF EXISTS TableEntity;
+DROP TABLE IF EXISTS Board;
+DROP TABLE IF EXISTS Round;
+DROP TABLE IF EXISTS Player;
+DROP TABLE IF EXISTS Team;
 
--- SQL commands to generate the bridge app database tables.
--- Creating the Team table
+-- For position: 1 = South, 2 = West, 3 = East, 4 = North
+
 CREATE TABLE Team (
     Name VARCHAR(255) PRIMARY KEY
 );
-
 -- Creating the Player table
 CREATE TABLE Player (
-    Name VARCHAR(255) PRIMARY KEY,
+    Name VARCHAR(255),
     TeamName VARCHAR(255),
-    FOREIGN KEY (TeamName) REFERENCES Team(Name)
-);
-
--- Creating the Tournament table
---CREATE TABLE Tournament (
---    Name VARCHAR(255) PRIMARY KEY
---);
-
--- Creating the Board table
-CREATE TABLE Board (
-    BoardID INT PRIMARY KEY,
-    RoundID INT,
-    Dealer CHAR(1),
-    Vulnerability VARCHAR(255)
-    FOREIGN KEY (RoundID) REFERENCES Round(RoundID),
-);
-
--- Creating the Table table
-CREATE TABLE TableEntity (
-    TableID INT PRIMARY KEY,
-    PairedTableName VARCHAR(255),
-    BoardID INT,
-    BidPhase TEXT,
-    FirstBid VARCHAR(255),
-    LastBid VARCHAR(255),
-    Result VARCHAR(255),
-    RawScore INT,
-    FOREIGN KEY (PairedTableName) REFERENCES TableEntity(TableID),
-    FOREIGN KEY (BoardID) REFERENCES Board(BoardID)
-);
-
--- Creating the PlaysTable table
-CREATE TABLE PlaysTable (
-    TableName VARCHAR(255),
-    Seat CHAR(1),
-    PlayerName VARCHAR(255),
-    FOREIGN KEY (TableName) REFERENCES TableEntity(TableID),
-    FOREIGN KEY (PlayerName) REFERENCES Player(Name)
+    FOREIGN KEY (TeamName) REFERENCES Team(Name),
+    PRIMARY KEY(Name, TeamName)
 );
 
 -- Creating the Round table
@@ -57,30 +27,64 @@ CREATE TABLE Round (
     TournamentName VARCHAR(255),
     TeamOneName VARCHAR(255),
     TeamTwoName VARCHAR(255),
-    --Date DATE,
     FOREIGN KEY (TeamOneName) REFERENCES Team(Name),
-    FOREIGN KEY (TeamTwoName) REFERENCES Team(Name),
-    FOREIGN KEY (TournamentName) REFERENCES Tournament(Name)
+    FOREIGN KEY (TeamTwoName) REFERENCES Team(Name)
+);
+
+-- Creating the Board table
+CREATE TABLE Board (
+    BoardID INT PRIMARY KEY,
+    RoundID INT,
+    Dealer INT,
+    Vulnerability CHAR(1),
+    TeamOneImp INT,
+    TeamTwoImp INT,
+    FOREIGN KEY (RoundID) REFERENCES Round(RoundID)
+);
+
+-- Creating the Table table
+CREATE TABLE TableEntity (
+    TableID INT PRIMARY KEY,
+    PairedTableID INT,
+    BoardID INT,
+    BidPhase TEXT,
+    FirstBid VARCHAR(10),
+    LastBid VARCHAR(10),
+    Result VARCHAR(10),
+    RawScore INT,
+    FOREIGN KEY (PairedTableID) REFERENCES TableEntity(TableID),
+    FOREIGN KEY (BoardID) REFERENCES Board(BoardID)
+);
+
+-- Creating the PlaysTable table, delay constraint checking for TableName 
+CREATE TABLE PlaysTable (
+    TableID INT,
+    Seat INT,
+    PlayerName VARCHAR(255),
+    TeamName VARCHAR(255),
+    FOREIGN KEY (TableID) REFERENCES TableEntity(TableID),
+    FOREIGN KEY (PlayerName, TeamName) REFERENCES Player(Name, TeamName)
 );
 
 -- Creating the Trick table
 CREATE TABLE Trick (
     TrickNumber INT,
-    TableName VARCHAR(255),
-    FirstSeat CHAR(1),
-    WinningSeat CHAR(1),
-    Play TEXT
-    FOREIGN KEY (TableName) REFERENCES TableEntity(TableID),
+    TableID INT,
+    FirstSeat INT,
+    WinningSeat INT,
+    Play VARCHAR(8),
+    FOREIGN KEY (TableID) REFERENCES TableEntity(TableID)
 );
 
 -- Creating the Hands table
 CREATE TABLE Hands (
-    Position TEXT,
-    Spades TEXT,
-    Hearts TEXT,
-    Diamonds TEXT,
-    Clubs TEXT,
+    BoardID INT,
+    Position INT,
+    Spades VARCHAR(13),
+    Hearts VARCHAR(13),
+    Diamonds VARCHAR(13),
+    Clubs VARCHAR(13),
     HighCardPoints INT,
-    SuitDistribution TEXT,
-    Vulnerability VARCHAR(255)
+    PRIMARY KEY(Position, BoardID),
+    FOREIGN KEY (BoardID) REFERENCES Board(BoardID)
 );
