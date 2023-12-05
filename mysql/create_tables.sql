@@ -8,6 +8,8 @@ DROP TABLE IF EXISTS Round;
 DROP TABLE IF EXISTS Player;
 DROP TABLE IF EXISTS Team;
 
+-- For position: 1 = South, 2 = West, 3 = East, 4 = North
+
 CREATE TABLE Team (
     Name VARCHAR(255) PRIMARY KEY
 );
@@ -33,7 +35,7 @@ CREATE TABLE Round (
 CREATE TABLE Board (
     BoardID INT PRIMARY KEY,
     RoundID INT,
-    Dealer CHAR(1),
+    Dealer INT,
     Vulnerability CHAR(1),
     TeamOneImp INT,
     TeamTwoImp INT,
@@ -57,7 +59,7 @@ CREATE TABLE TableEntity (
 -- Creating the PlaysTable table, delay constraint checking for TableName 
 CREATE TABLE PlaysTable (
     TableID INT,
-    Seat CHAR(1),
+    Seat INT,
     PlayerName VARCHAR(255),
     TeamName VARCHAR(255),
     FOREIGN KEY (TableID) REFERENCES TableEntity(TableID),
@@ -68,23 +70,21 @@ CREATE TABLE PlaysTable (
 CREATE TABLE Trick (
     TrickNumber INT,
     TableID INT,
-    FirstSeat CHAR(1),
-    WinningSeat CHAR(1),
-    Play CHAR(8),
+    FirstSeat INT,
+    WinningSeat INT,
+    Play VARCHAR(8),
     FOREIGN KEY (TableID) REFERENCES TableEntity(TableID)
 );
 
 -- Creating the Hands table
 CREATE TABLE Hands (
-    HandID INT,
     BoardID INT,
-    Position CHAR(1),
+    Position INT,
     Spades VARCHAR(13),
     Hearts VARCHAR(13),
     Diamonds VARCHAR(13),
     Clubs VARCHAR(13),
     HighCardPoints INT,
-    SuitDistribution CHAR(4),
-    PRIMARY KEY(Position, BoardID)
+    PRIMARY KEY(Position, BoardID),
     FOREIGN KEY (BoardID) REFERENCES Board(BoardID)
 );
