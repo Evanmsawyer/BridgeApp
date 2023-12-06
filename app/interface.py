@@ -12,7 +12,7 @@ import sys
 import os
 
 current_script_directory = os.path.dirname(__file__)
-adjacent_directory_path = os.path.join(current_script_directory, '..', 'data')
+adjacent_directory_path = os.path.join(current_script_directory, '..', 'data/code')
 sys.path.insert(0, adjacent_directory_path)
 import linparser
 
@@ -288,13 +288,20 @@ def on_tree_selection(event):
             bridge_app = BridgeGameApp(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
             update_statistics_view(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
         
-        if "PlayerName" or "TeamName" in columns:
-            PlayerName_index = columns.index('Name')
-            PlayerName_id = row_data[PlayerName_index]
+        try:
+            if "PlayerName" in columns:
+                PlayerName_index = columns.index('PlayerName')
+                PlayerName_id = row_data[PlayerName_index]
+                TeamName_index = columns.index('TeamName')
+                TeamName_id = row_data[TeamName_index]
+                print(f"Selected TableID: {PlayerName_id} on team {TeamName_id}")
+        finally:
+            pass
+            
+        if "TeamName" in columns:
             TeamName_index = columns.index('TeamName')
             TeamName_id = row_data[TeamName_index]
-            print(f"Selected TableID: {PlayerName_id} on team {TeamName_id}")  # Or perform other actions with the TableID
-            
+            print(f"Selected Team: {TeamName_id}")
 
 result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
 
@@ -635,19 +642,37 @@ tab_statistics = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_statistics, text="Statistics")
 
 def fetch_statistics(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks):
+    for widget in tab_statistics.winfo_children():
+        widget.destroy()
     table_id = currentTable[0][0]
+    board_id = currentTable[0][2]
+    final_bid = currentTable[0][4]
+    print(board_id)
     plays_table = db.execute_query(f"SELECT PlayerName, TeamName FROM PlaysTable WHERE TableID = {table_id}")
 
     # Dictionary to store statistics for each player
     player_stats = {}
     
+    total_boards_in_tournament = db.execute_query("WITH tournament_name(val) AS (SELECT Round.TournamentName FROM BridgeDB.Board NATURAL JOIN BridgeDB.Round WHERE BoardID = %s) SELECT TournamentName, COUNT(*) FROM (BridgeDB.Board NATURAL JOIN BridgeDB.Round), tournament_name WHERE TournamentName = tournament_name.val"%(board_id))
+    player_stats[f"Tournament name"] = total_boards_in_tournament[0][0]
+    player_stats[f"Number of boards in tournament"] = total_boards_in_tournament[0][1]
+    player_stats[f"First bid"] = final_bid
+
     # Fetch statistics for each player
     for i in range(0, 4):
         player_name = list(plays_table[i])[0]
         team_name = list(plays_table[i])[1]
         key = f"{team_name}{player_name}"
         total_tricks = db.execute_query("SELECT COUNT(*) FROM (SELECT TableID, Seat FROM BridgeDB.PlaysTable WHERE PlayerName = '%s' AND TeamName = '%s' AND TableID = %s) AS T NATURAL JOIN BridgeDB.Trick WHERE T.Seat = WinningSeat;"%(player_name, team_name, table_id,))
-        player_stats[f"{player_name} on team {team_name} has Total Tricks "] = total_tricks[0][0]
+        total_tricks_career = db.execute_query("SELECT COUNT(*) FROM PlaysTable NATURAL JOIN Trick WHERE PlaysTable.Seat = Trick.WinningSeat AND PlayerName = '%s' AND TeamName = '%s'"%(player_name, team_name))
+        max_hcp = db.execute_query("SELECT MAX(HighCardPoints) FROM BridgeDB.PlaysTable NATURAL JOIN BridgeDB.TableEntity NATURAL JOIN BridgeDB.Hands WHERE PlayerName = '%s' AND TeamName = '%s'"%(player_name, team_name))
+        slam_number = db.execute_query(f"SELECT COUNT(*) FROM (SELECT * FROM BridgeDB.TableEntity WHERE REGEXP_LIKE(TableEntity.Result, '^[6-7].[+=].*$')) AS T NATURAL JOIN BridgeDB.PlaysTable WHERE PlayerName = '{player_name}' AND TeamName = '{team_name}' AND ((SUBSTRING(LastBid, 1, 1) IN ('S', 'N') AND Seat % 2 = 1) OR (SUBSTRING(LastBid, 1, 1) IN ('E', 'W') AND Seat % 2 = 0))")
+        #void_number = db.execute_query("SELECT COUNT(*)FROM (SELECT * FROM BridgeDB.PlaysTable WHERE PlayerName = '%s' AND TeamName = '%s') AS T NATURAL JOIN BridgeDB.TableEntity NATURAL JOIN BridgeDB.Hands WHERE Hearts = '' OR Spades = '' OR Diamonds = '' OR Clubs = ''"%(player_name, team_name))
+        player_stats[f"{player_name} on team {team_name} has total tricks on table"] = total_tricks[0][0]
+        player_stats[f"{player_name} on team {team_name} has total tricks in career"] = total_tricks_career[0][0]
+        player_stats[f"{player_name} on team {team_name} has max HCP in career"] = max_hcp[0][0]
+        player_stats[f"{player_name} on team {team_name} has slams games in career"] = slam_number[0][0]
+        #player_stats[f"{player_name} on team {team_name} has void hands in career"] = void_number[0][0]
 
     return player_stats
     #return {
