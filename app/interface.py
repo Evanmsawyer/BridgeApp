@@ -3,7 +3,7 @@ from tkinter import ttk
 from tkinter import font as tkfont
 from tkinter import filedialog
 import pandas as pd
-from PIL import Image, ImageTk
+#from PIL import Image, ImageTk
 import os
 import json
 from dbCommunicator import DBConnector
@@ -51,6 +51,7 @@ class SelectCriteria(enum.Enum):
     VoidHandSearch = "Void Hand Search"
     UnderDogSearch = "Under Dog Search"
     TwoBidsOneMade = "Two Bids One Made"
+    TotalImpByTeam = "Total Imp By Team"
 
     @property
     def description(self):
@@ -76,7 +77,8 @@ class SelectCriteria(enum.Enum):
             SelectCriteria.VulnerabilitySearch: ("Vulnerability Search (N,E,B)"),
             SelectCriteria.VoidHandSearch: ("Void Hand Search (NA)"),
             SelectCriteria.UnderDogSearch: ("Under Dog Search (NA)"),
-            SelectCriteria.TwoBidsOneMade: ("Two Bids One Made (NA)")
+            SelectCriteria.TwoBidsOneMade: ("Two Bids One Made (NA)"),
+            SelectCriteria.TotalImpByTeam: ("Total Imp By Team (NA)")
         }
         return descriptions[self]
 
@@ -104,7 +106,8 @@ class SelectCriteria(enum.Enum):
             SelectCriteria.VulnerabilitySearch: "VulnerabilitySearch",
             SelectCriteria.VoidHandSearch: "VoidHandSearch",
             SelectCriteria.UnderDogSearch: "UnderDogSearch",
-            SelectCriteria.TwoBidsOneMade: "TwoBidsOneMade"
+            SelectCriteria.TwoBidsOneMade: "TwoBidsOneMade",
+            SelectCriteria.TotalImpByTeam: "TotalImpByTeam"
         }
         return procedures[self]
 
@@ -112,6 +115,9 @@ class SelectCriteria(enum.Enum):
 def update_result_view(dataList):
     result_tree.delete(*result_tree.get_children())
     result_tree["columns"] = ()
+
+    if dataList == [[]]: 
+        return
 
     if len(dataList) > 1:
         dataframes = []
@@ -296,6 +302,11 @@ def execute_search():
                 searchData.append(data)
             elif procedure_name == SelectCriteria.TwoBidsOneMade.value: 
                 procedure_name = SelectCriteria.TwoBidsOneMade.procedure
+                columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.TotalImpByTeam.value: 
+                procedure_name = SelectCriteria.TotalImpByTeam.procedure
                 columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
                 #update_result_view(columns, data)
                 searchData.append(data)
@@ -628,7 +639,6 @@ class BridgeGameApp:
                 y_position += 20  # Space between suits
 
     def update_hand(self, player, card_played, remove=False):
-        print(player)
         player = int(player)
         hand_tuple = self.hands.get(player)
         hand_tuplerev = self.handsReverse.get(player)
@@ -641,7 +651,6 @@ class BridgeGameApp:
         hand_list = list(hand_tuple)
         hand_listrev = list(hand_tuplerev)
         # Debug print to check the card
-        print(f"Card being updated: {card_played}")
 
         try:
             suit_index = 'SHDC'.index(card_played[0])
@@ -676,7 +685,6 @@ class BridgeGameApp:
             self.update_hand(player, [cards_played[i:i+2] for i in range(0, len(cards_played), 2)])"""
 
     def move_next(self):
-        print(self.current_play_index)
         if self.current_play_index < len(self.currentTricks) - 1:
             self.current_play_index += 1
             self.play_current()
@@ -685,7 +693,6 @@ class BridgeGameApp:
             self.end_label.pack()
 
     def move_back(self):
-        print(self.current_play_index)
         if self.current_play_index > 1:
             self.current_play_index -= 1
             self.play_current(backward=True)
@@ -721,10 +728,8 @@ class BridgeGameApp:
             # If moving backward, remove the last played cards from the display
             # and add them back to each player's hand
             for card in cards:
-                print(card)
                 #self.update_center(None, cards, replace=True)
                 player_with_card = self.find_player_with_card(card, True) 
-                print(player_with_card)
                 savedPos[card] = pos_dic[player_with_card]
 
                 if player_with_card is not None:
@@ -772,7 +777,6 @@ def fetch_statistics(currentTable, currentNHand, currentSHand, currentEHand, cur
     table_id = currentTable[0][0]
     board_id = currentTable[0][2]
     final_bid = currentTable[0][4]
-    print(board_id)
     plays_table = db.execute_query(f"SELECT PlayerName, TeamName FROM PlaysTable WHERE TableID = {table_id}")
 
     # Dictionary to store statistics for each player
@@ -817,28 +821,45 @@ tab_edit = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_edit, text="Edit")
 
 Player_Info = []
+SelectedTeam = None
 
 def update_players_names(PlayerName, TeamName):
     if PlayerName == None:
-        plays_table = db.execute_query(f"SELECT PlayerName, TeamName FROM PlaysTable WHERE TeamName = '{TeamName}'")
+        plays_table = db.execute_query(f"SELECT DISTINCT PlayerName, TeamName FROM PlaysTable WHERE TeamName = '{TeamName}'")
     else:
-        plays_table = db.execute_query(f"SELECT PlayerName, TeamName FROM PlaysTable WHERE TeamName = '{TeamName}' and PlayerName = '{PlayerName}'")
-    Player_Info = plays_table[0]
+        plays_table = db.execute_query(f"SELECT DISTINCT PlayerName, TeamName FROM PlaysTable WHERE TeamName = '{TeamName}' and PlayerName = '{PlayerName}'")
+    Player_Info = plays_table
     update_text_event(Player_Info)
 
 def update_text():
     print()
 
 def update_text_event(Player_Info):
-    print("update when lick")
-    print(Player_Info)
-    if len(Player_Info) > 0:
-        edit_combobox['values'] = (Player_Info[0] + Player_Info[1])
+    playerlist = []
+    for key, (player, team) in Player_Info.items():
+            playerlist.append(f"{player} ({team})")  # Combine player name and team
+            global SelectedTeam
+            SelectedTeam = team
 
-def push_update(name):
-    #db.execute_stored_procedure_with_no_parameters(EditNameProcedure)
-    print()
+        # Update the combobox values if there are players in the list
+    if playerlist:
+        edit_combobox['values'] = playerlist
 
+def push_update():
+    newName = new_spelling_entry.get()
+    global SelectedTeam
+    oldName = edit_combobox.get().replace( " (" + SelectedTeam + ")", '')
+    try:
+        update_description.config(text=f"Changed {oldName} ({SelectedTeam}) to {newName} ({SelectedTeam})")
+        print(oldName)
+        print(newName)
+        print(SelectedTeam)
+        db.execute_stored_procedure("UpdateName", (oldName, newName, SelectedTeam))
+        print("Successful")
+    except Exception as e:
+        print("Error:", e) 
+        update_description.config(text=f"Failed to change {oldName} ({SelectedTeam}) to {newName} ({SelectedTeam})")
+    
 # Update Description
 update_description = ttk.Label(tab_edit, text="If you are a player who would like to edit their name in the database, you can do so below.", style='TLabel')
 update_description.pack(pady=(20, 0))
@@ -847,14 +868,7 @@ current_spelling_frame = ttk.Frame(tab_edit, style='TFrame')
 current_spelling_frame.pack(fill='x', pady=10)
 current_spelling_label = ttk.Label(current_spelling_frame, text="Current Spelling:", style='TLabel')
 current_spelling_label.pack(side='left', padx=5)
-"""
-current_spelling_entry = ttk.Entry(current_spelling_frame)
-current_spelling_entry.pack(side='left', fill='x', expand=True, padx=5)
-search_button = ttk.Button(current_spelling_frame, text="Search", command=lambda: check_for_player_name(current_spelling_entry.get()), style='TButton')
-search_button.pack(side='left', padx=5)
 
-edit_combobox = ttk.Combobox(current_spelling_frame, values=criteria_options, state='readonly', font=custom_font)
-edit_combobox.pack(side='left', padx=criteria_options.__len__(), pady=criteria_options.__len__())"""
 name_selected = ""
 edit_combobox = ttk.Combobox(current_spelling_frame, textvariable=name_selected)
 edit_combobox['values'] = update_text()
@@ -877,10 +891,17 @@ notebook.add(tab_upload, text="Upload")
 #Function to handle file upload
 def upload_file():
     file_path = filedialog.askopenfilename()
-    if file_path:
-        # call function to upload file to database
-        round = linparser.read_file(file_path)
-        linparser.insert_data(round, db.connection)
+    try:
+        if file_path and file_path.endswith('.lin'):
+            # call function to upload file to database
+            round = linparser.read_file(file_path)
+            linparser.insert_data(round, db.connection)
+            upload_description.config(text="File uploaded successfully!")
+        else:
+            upload_description.config(text="Invalid file type. Please upload a .lin file.")
+    except Exception as e:
+        print("Error:", e) 
+        upload_description.config(text="File upload failed. Please try again.")
 
 # Upload File Description
 upload_description = ttk.Label(tab_upload, text="You can upload data for bridge tournaments using .lin files only", style='TLabel')
