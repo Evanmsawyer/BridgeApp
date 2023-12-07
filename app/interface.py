@@ -3,7 +3,7 @@ from tkinter import ttk
 from tkinter import font as tkfont
 from tkinter import filedialog
 import pandas as pd
-from PIL import Image, ImageTk
+#from PIL import Image, ImageTk
 import os
 import json
 from dbCommunicator import DBConnector
@@ -12,7 +12,7 @@ import sys
 import os
 
 current_script_directory = os.path.dirname(__file__)
-adjacent_directory_path = os.path.join(current_script_directory, '..', 'data')
+adjacent_directory_path = os.path.join(current_script_directory, '..', 'data/code')
 sys.path.insert(0, adjacent_directory_path)
 import linparser
 
@@ -30,44 +30,68 @@ currentTricks = None
 
 class SelectCriteria(enum.Enum):
     Player = "Player"
+    TableByPlayer = "Table By Player"
     HCP = "HCP"
     FirstBid = "First Bid"
     LastBid = "Last Bid"
     BoardID = "Board Search"
+    BoardsInTournament = "Boards In Tournament"
+    BoardsPerTournament = "Board Count In Tournament"
     Tournament = "Tournament"
-    Tricks = "Tricks"
+    Tricks = "Tricks by Player"
     Slams = "Slams"
     PlayersByTeam = "Players By Team"
     Seat = "Seat"
     Dealer = "Dealer"
     Score = "Score"
+    RoundSearch = "Round Search"
+    Suit = "Suit Search"
+    TricksForTable = "Tricks for Table"
+    VulnerabilitySearch = "Vulnerability Search"
+    VoidHandSearch = "Void Hand Search"
+    UnderDogSearch = "Under Dog Search"
+    TwoBidsOneMade = "Two Bids One Made"
+    TotalImpByTeam = "Total Imp By Team"
 
     @property
     def description(self):
         descriptions = {
             SelectCriteria.Player: "Player (Name)",
-            SelectCriteria.HCP: "HCP (High, Low)",
+            SelectCriteria.HCP: "HCP (Low, High)",
             SelectCriteria.FirstBid: "First Bid (OpeningBid)",
             SelectCriteria.LastBid: "Last Bid (EndingBid)",
+            SelectCriteria.BoardsInTournament: "Boards In Tournament (Name)",
+            SelectCriteria.BoardsPerTournament: "Board Count In Tournament (Name)",
             SelectCriteria.BoardID: "Board Search (BoardID)",
             SelectCriteria.Tournament: "Tournament (Name)",
-            SelectCriteria.Tricks: "Tricks (TableID)",
+            SelectCriteria.Tricks: "Tricks by Player (Player Name, Team)",
             SelectCriteria.Slams: "Slams (N/A)",
             SelectCriteria.PlayersByTeam: "Players By Team (Team Name)",
             SelectCriteria.Seat: "Seat (TableID, Player Name, Team Name)",
             SelectCriteria.Dealer: "Dealer (Number)",
             SelectCriteria.Score: "Score (Low, High)",
+            SelectCriteria.RoundSearch: "Round Search (Tournament Name)",
+            SelectCriteria.Suit: ("Suit Search (Spades, hearts, diamons, clubs)"),
+            SelectCriteria.TableByPlayer: ("Table By Player (Name, Team)"),
+            SelectCriteria.TricksForTable: ("Tricks for Table (ID)"),
+            SelectCriteria.VulnerabilitySearch: ("Vulnerability Search (N,E,B)"),
+            SelectCriteria.VoidHandSearch: ("Void Hand Search (NA)"),
+            SelectCriteria.UnderDogSearch: ("Under Dog Search (NA)"),
+            SelectCriteria.TwoBidsOneMade: ("Two Bids One Made (NA)"),
+            SelectCriteria.TotalImpByTeam: ("Total Imp By Team (NA)")
         }
         return descriptions[self]
-    
+
     @property
     def procedure(self):
         procedures = {
             SelectCriteria.Player: "PlayerSearch",
             SelectCriteria.HCP: "HCPSearchInRange",
-            SelectCriteria.FirstBid: "OpeningBidSearch",
+            SelectCriteria.FirstBid: "StartingBidSearch",
             SelectCriteria.LastBid: "EndingBidSearch",
             SelectCriteria.BoardID: "BoardSearch",
+            SelectCriteria.BoardsPerTournament: "BoardsPerTournament",
+            SelectCriteria.BoardsInTournament: "BoardsInTournament",
             SelectCriteria.Tournament: "TableInTournament",
             SelectCriteria.Tricks: "TotalTricksByPlayer",
             SelectCriteria.Slams: "SlamBidAndMade",
@@ -75,21 +99,59 @@ class SelectCriteria(enum.Enum):
             SelectCriteria.Seat: "GetSeat",
             SelectCriteria.Dealer: "DealerSearch",
             SelectCriteria.Score: "RawScoreSearch",
+            SelectCriteria.RoundSearch: "RoundSearch",
+            SelectCriteria.Suit:"SuitSearch",
+            SelectCriteria.TableByPlayer: "table_by_player",
+            SelectCriteria.TricksForTable: "TricksForTable",
+            SelectCriteria.VulnerabilitySearch: "VulnerabilitySearch",
+            SelectCriteria.VoidHandSearch: "VoidHandSearch",
+            SelectCriteria.UnderDogSearch: "UnderDogSearch",
+            SelectCriteria.TwoBidsOneMade: "TwoBidsOneMade",
+            SelectCriteria.TotalImpByTeam: "TotalImpByTeam"
         }
         return procedures[self]
 
 # Function to update the result view
-def update_result_view(columns, data):
+def update_result_view(dataList):
     result_tree.delete(*result_tree.get_children())
     result_tree["columns"] = ()
+
+    if dataList == [[]]: 
+        return
+
+    if len(dataList) > 1:
+        dataframes = []
+        for d in dataList:
+            # Check if the dictionary is row-like or DataFrame-like
+            if isinstance(d, dict):
+                # If the dictionary represents a row, wrap it in a list
+                df = pd.DataFrame([d])
+            else:
+                # If the dictionary is DataFrame-like, pass it directly
+                df = pd.DataFrame(d)
+            dataframes.append(df)
+
+        try:
+            merged_df = dataframes[0]
+            for df in dataframes[1:]:
+                merged_df = pd.merge(merged_df, df, how='inner')
+        except:
+            print("Error merging dataframes")
+            return
+        columns = list(merged_df.columns)
+        data = merged_df.values.tolist()
+    else:
+        data = dataList[0]
+        columns = list(data[0].keys())
+        data = [list(row.values()) for row in data]
+
 
     result_tree["columns"] = columns
     for col in columns:
         result_tree.heading(col, text=col)
         result_tree.column(col, width=120, minwidth=120, anchor="w")
     for row in data:
-        row_values = [row[col] for col in columns]
-        result_tree.insert('', 'end', values=row_values)
+        result_tree.insert('', 'end', values=row)
 
 # Create a scrollable frame
 class ScrollableFrame(ttk.Frame):
@@ -124,61 +186,133 @@ def add_to_search():
 
 # Function to execute the search
 def execute_search():
+    searchData = []
     search_text = search_bar.get()
     for search in search_text.split('"'):
         if ':' in search:
             procedure_name, parameters = search.replace('"', '').split(':', 1)  # Removing quotes and splitting on the first colon
             parameters = tuple(parameters.split(','))
-            
             print(f"Procedure: {procedure_name}, Parameters: {parameters}")
             if procedure_name == SelectCriteria.Tournament.value: 
                 #Test Data: 2013 USBC USA2 Final
                 procedure_name = SelectCriteria.Tournament.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.Tricks.value:
                 #Test Data: 
                 procedure_name = SelectCriteria.Tricks.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.HCP.value:
                 procedure_name = SelectCriteria.HCP.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.LastBid.value:
                 procedure_name = SelectCriteria.LastBid.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.BoardID.value:
                 procedure_name = SelectCriteria.BoardID.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.Player.value:
                 procedure_name = SelectCriteria.Player.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.TricksForTable.value:
+                procedure_name = SelectCriteria.TricksForTable.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.VulnerabilitySearch.value:
+                procedure_name = SelectCriteria.VulnerabilitySearch.procedure 
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.Dealer.value:
                 procedure_name = SelectCriteria.Dealer.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.PlayersByTeam.value:
                 procedure_name = SelectCriteria.PlayersByTeam.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.Seat.value: 
                 procedure_name = SelectCriteria.Seat.procedure 
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.Score.value:
                 procedure_name = SelectCriteria.Score.procedure
                 columns, data = db.execute_stored_procedure(procedure_name, parameters)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
             elif procedure_name == SelectCriteria.Slams.value: 
                 procedure_name = SelectCriteria.Slams.procedure
                 columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
-                update_result_view(columns, data)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.BoardsInTournament.value: 
+                procedure_name = SelectCriteria.BoardsInTournament.procedure
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.Suit.value: 
+                procedure_name = SelectCriteria.Suit.procedure
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.BoardsPerTournament.value: 
+                procedure_name = SelectCriteria.BoardsPerTournament.procedure
+                columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.RoundSearch.value: 
+                procedure_name = SelectCriteria.RoundSearch.procedure
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.FirstBid.value:
+                procedure_name = SelectCriteria.FirstBid.procedure
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.TableByPlayer.value: 
+                procedure_name = SelectCriteria.TableByPlayer.procedure
+                columns, data = db.execute_stored_procedure(procedure_name, parameters)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.VoidHandSearch.value: 
+                procedure_name = SelectCriteria.VoidHandSearch.procedure
+                columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.UnderDogSearch.value: 
+                procedure_name = SelectCriteria.UnderDogSearch.procedure
+                columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.TwoBidsOneMade.value: 
+                procedure_name = SelectCriteria.TwoBidsOneMade.procedure
+                columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
+                #update_result_view(columns, data)
+                searchData.append(data)
+            elif procedure_name == SelectCriteria.TotalImpByTeam.value: 
+                procedure_name = SelectCriteria.TotalImpByTeam.procedure
+                columns, data = db.execute_stored_procedure_with_no_parameters(procedure_name)
+                #update_result_view(columns, data)
+                searchData.append(data)
             else:
                 print("Invalid procedure name:", procedure_name)
+            update_result_view(searchData)
         else:
             if search != '':
                 print("Invalid format in search text:", search)
@@ -288,13 +422,22 @@ def on_tree_selection(event):
             bridge_app = BridgeGameApp(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
             update_statistics_view(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks)
         
-        if "PlayerName" or "TeamName" in columns:
-            PlayerName_index = columns.index('Name')
-            PlayerName_id = row_data[PlayerName_index]
+        try:
+            if "PlayerName" in columns:
+                PlayerName_index = columns.index('PlayerName')
+                PlayerName_id = row_data[PlayerName_index]
+                TeamName_index = columns.index('TeamName')
+                TeamName_id = row_data[TeamName_index]
+                print(f"Selected TableID: {PlayerName_id} on team {TeamName_id}")
+                update_players_names(PlayerName_id, TeamName_id)
+        finally:
+            pass
+            
+        if "TeamName" in columns:
             TeamName_index = columns.index('TeamName')
             TeamName_id = row_data[TeamName_index]
-            print(f"Selected TableID: {PlayerName_id} on team {TeamName_id}")  # Or perform other actions with the TableID
-            
+            print(f"Selected Team: {TeamName_id}")
+            update_players_names(None, TeamName_id)
 
 result_tree.bind("<<TreeviewSelect>>", on_tree_selection)
 
@@ -496,7 +639,6 @@ class BridgeGameApp:
                 y_position += 20  # Space between suits
 
     def update_hand(self, player, card_played, remove=False):
-        print(player)
         player = int(player)
         hand_tuple = self.hands.get(player)
         hand_tuplerev = self.handsReverse.get(player)
@@ -509,7 +651,6 @@ class BridgeGameApp:
         hand_list = list(hand_tuple)
         hand_listrev = list(hand_tuplerev)
         # Debug print to check the card
-        print(f"Card being updated: {card_played}")
 
         try:
             suit_index = 'SHDC'.index(card_played[0])
@@ -544,7 +685,6 @@ class BridgeGameApp:
             self.update_hand(player, [cards_played[i:i+2] for i in range(0, len(cards_played), 2)])"""
 
     def move_next(self):
-        print(self.current_play_index)
         if self.current_play_index < len(self.currentTricks) - 1:
             self.current_play_index += 1
             self.play_current()
@@ -553,7 +693,6 @@ class BridgeGameApp:
             self.end_label.pack()
 
     def move_back(self):
-        print(self.current_play_index)
         if self.current_play_index > 1:
             self.current_play_index -= 1
             self.play_current(backward=True)
@@ -589,10 +728,8 @@ class BridgeGameApp:
             # If moving backward, remove the last played cards from the display
             # and add them back to each player's hand
             for card in cards:
-                print(card)
                 #self.update_center(None, cards, replace=True)
                 player_with_card = self.find_player_with_card(card, True) 
-                print(player_with_card)
                 savedPos[card] = pos_dic[player_with_card]
 
                 if player_with_card is not None:
@@ -635,19 +772,36 @@ tab_statistics = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_statistics, text="Statistics")
 
 def fetch_statistics(currentTable, currentNHand, currentSHand, currentEHand, currentWHand, currentTricks):
+    for widget in tab_statistics.winfo_children():
+        widget.destroy()
     table_id = currentTable[0][0]
+    board_id = currentTable[0][2]
+    final_bid = currentTable[0][4]
     plays_table = db.execute_query(f"SELECT PlayerName, TeamName FROM PlaysTable WHERE TableID = {table_id}")
 
     # Dictionary to store statistics for each player
     player_stats = {}
     
+    total_boards_in_tournament = db.execute_query("WITH tournament_name(val) AS (SELECT Round.TournamentName FROM BridgeDB.Board NATURAL JOIN BridgeDB.Round WHERE BoardID = %s) SELECT TournamentName, COUNT(*) FROM (BridgeDB.Board NATURAL JOIN BridgeDB.Round), tournament_name WHERE TournamentName = tournament_name.val"%(board_id))
+    player_stats[f"Tournament name"] = total_boards_in_tournament[0][0]
+    player_stats[f"Number of boards in tournament"] = total_boards_in_tournament[0][1]
+    player_stats[f"First bid"] = final_bid
+
     # Fetch statistics for each player
     for i in range(0, 4):
         player_name = list(plays_table[i])[0]
         team_name = list(plays_table[i])[1]
         key = f"{team_name}{player_name}"
         total_tricks = db.execute_query("SELECT COUNT(*) FROM (SELECT TableID, Seat FROM BridgeDB.PlaysTable WHERE PlayerName = '%s' AND TeamName = '%s' AND TableID = %s) AS T NATURAL JOIN BridgeDB.Trick WHERE T.Seat = WinningSeat;"%(player_name, team_name, table_id,))
-        player_stats[f"{player_name} on team {team_name} has Total Tricks "] = total_tricks[0][0]
+        total_tricks_career = db.execute_query("SELECT COUNT(*) FROM PlaysTable NATURAL JOIN Trick WHERE PlaysTable.Seat = Trick.WinningSeat AND PlayerName = '%s' AND TeamName = '%s'"%(player_name, team_name))
+        max_hcp = db.execute_query("SELECT MAX(HighCardPoints) FROM BridgeDB.PlaysTable NATURAL JOIN BridgeDB.TableEntity NATURAL JOIN BridgeDB.Hands WHERE PlayerName = '%s' AND TeamName = '%s'"%(player_name, team_name))
+        slam_number = db.execute_query(f"SELECT COUNT(*) FROM (SELECT * FROM BridgeDB.TableEntity WHERE REGEXP_LIKE(TableEntity.Result, '^[6-7].[+=].*$')) AS T NATURAL JOIN BridgeDB.PlaysTable WHERE PlayerName = '{player_name}' AND TeamName = '{team_name}' AND ((SUBSTRING(LastBid, 1, 1) IN ('S', 'N') AND Seat % 2 = 1) OR (SUBSTRING(LastBid, 1, 1) IN ('E', 'W') AND Seat % 2 = 0))")
+        #void_number = db.execute_query("SELECT COUNT(*)FROM (SELECT * FROM BridgeDB.PlaysTable WHERE PlayerName = '%s' AND TeamName = '%s') AS T NATURAL JOIN BridgeDB.TableEntity NATURAL JOIN BridgeDB.Hands WHERE Hearts = '' OR Spades = '' OR Diamonds = '' OR Clubs = ''"%(player_name, team_name))
+        player_stats[f"{player_name} on team {team_name} has total tricks on table"] = total_tricks[0][0]
+        player_stats[f"{player_name} on team {team_name} has total tricks in career"] = total_tricks_career[0][0]
+        player_stats[f"{player_name} on team {team_name} has max HCP in career"] = max_hcp[0][0]
+        player_stats[f"{player_name} on team {team_name} has slams games in career"] = slam_number[0][0]
+        #player_stats[f"{player_name} on team {team_name} has void hands in career"] = void_number[0][0]
 
     return player_stats
     #return {
@@ -666,12 +820,46 @@ def update_statistics_view(currentTable, currentNHand, currentSHand, currentEHan
 tab_edit = ttk.Frame(notebook, style='TFrame')
 notebook.add(tab_edit, text="Edit")
 
-def update_player_name():
-    print("update player name")
+Player_Info = []
+SelectedTeam = None
 
-def check_for_player_name(name):
-    print(name)
+def update_players_names(PlayerName, TeamName):
+    if PlayerName == None:
+        plays_table = db.execute_query(f"SELECT DISTINCT PlayerName, TeamName FROM PlaysTable WHERE TeamName = '{TeamName}'")
+    else:
+        plays_table = db.execute_query(f"SELECT DISTINCT PlayerName, TeamName FROM PlaysTable WHERE TeamName = '{TeamName}' and PlayerName = '{PlayerName}'")
+    Player_Info = plays_table
+    update_text_event(Player_Info)
 
+def update_text():
+    print()
+
+def update_text_event(Player_Info):
+    playerlist = []
+    for key, (player, team) in Player_Info.items():
+            playerlist.append(f"{player} ({team})")  # Combine player name and team
+            global SelectedTeam
+            SelectedTeam = team
+
+        # Update the combobox values if there are players in the list
+    if playerlist:
+        edit_combobox['values'] = playerlist
+
+def push_update():
+    newName = new_spelling_entry.get()
+    global SelectedTeam
+    oldName = edit_combobox.get().replace( " (" + SelectedTeam + ")", '')
+    try:
+        update_description.config(text=f"Changed {oldName} ({SelectedTeam}) to {newName} ({SelectedTeam})")
+        print(oldName)
+        print(newName)
+        print(SelectedTeam)
+        db.execute_stored_procedure("UpdateName", (oldName, newName, SelectedTeam))
+        print("Successful")
+    except Exception as e:
+        print("Error:", e) 
+        update_description.config(text=f"Failed to change {oldName} ({SelectedTeam}) to {newName} ({SelectedTeam})")
+    
 # Update Description
 update_description = ttk.Label(tab_edit, text="If you are a player who would like to edit their name in the database, you can do so below.", style='TLabel')
 update_description.pack(pady=(20, 0))
@@ -680,10 +868,12 @@ current_spelling_frame = ttk.Frame(tab_edit, style='TFrame')
 current_spelling_frame.pack(fill='x', pady=10)
 current_spelling_label = ttk.Label(current_spelling_frame, text="Current Spelling:", style='TLabel')
 current_spelling_label.pack(side='left', padx=5)
-current_spelling_entry = ttk.Entry(current_spelling_frame)
-current_spelling_entry.pack(side='left', fill='x', expand=True, padx=5)
-search_button = ttk.Button(current_spelling_frame, text="Search", command=lambda: check_for_player_name(current_spelling_entry.get()), style='TButton')
-search_button.pack(side='left', padx=5)
+
+name_selected = ""
+edit_combobox = ttk.Combobox(current_spelling_frame, textvariable=name_selected)
+edit_combobox['values'] = update_text()
+#edit_combobox.bind('<FocusIn>', lambda event: update_text_event(event))
+edit_combobox.pack(side='left', fill='x', expand=True, padx=5, pady=5)
 
 new_spelling_frame = ttk.Frame(tab_edit, style='TFrame')
 new_spelling_frame.pack(fill='x', pady=10)
@@ -691,7 +881,7 @@ new_spelling_label = ttk.Label(new_spelling_frame, text="New Spelling:", style='
 new_spelling_label.pack(side='left', padx=5)
 new_spelling_entry = ttk.Entry(new_spelling_frame)
 new_spelling_entry.pack(side='left', fill='x', expand=True, padx=5)
-submit_button = ttk.Button(new_spelling_frame, text="Submit", command=update_player_name, style='TButton')
+submit_button = ttk.Button(new_spelling_frame, text="Submit", command=push_update, style='TButton')
 submit_button.pack(side='left', padx=5)
 
 # Tab 5: Upload File
@@ -701,10 +891,17 @@ notebook.add(tab_upload, text="Upload")
 #Function to handle file upload
 def upload_file():
     file_path = filedialog.askopenfilename()
-    if file_path:
-        # call function to upload file to database
-        round = linparser.read_file(file_path)
-        linparser.insert_data(round, db.connection)
+    try:
+        if file_path and file_path.endswith('.lin'):
+            # call function to upload file to database
+            round = linparser.read_file(file_path)
+            linparser.insert_data(round, db.connection)
+            upload_description.config(text="File uploaded successfully!")
+        else:
+            upload_description.config(text="Invalid file type. Please upload a .lin file.")
+    except Exception as e:
+        print("Error:", e) 
+        upload_description.config(text="File upload failed. Please try again.")
 
 # Upload File Description
 upload_description = ttk.Label(tab_upload, text="You can upload data for bridge tournaments using .lin files only", style='TLabel')
