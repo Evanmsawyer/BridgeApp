@@ -101,7 +101,7 @@ CREATE TABLE `PlaysTable` (
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`mark`@`%`*/ /*!50003 TRIGGER `check_seat` AFTER INSERT ON `PlaysTable` FOR EACH ROW BEGIN
+/*!50003 CREATE TRIGGER `check_seat` AFTER INSERT ON `PlaysTable` FOR EACH ROW BEGIN
 	IF NEW.Seat NOT BETWEEN 1 AND 4 THEN
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Seat not in range 1-4';
 	END IF;
@@ -195,7 +195,7 @@ CREATE TABLE `Trick` (
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`mark`@`%`*/ /*!50003 TRIGGER `trick_trigger` BEFORE INSERT ON `Trick` FOR EACH ROW BEGIN
+/*!50003 CREATE TRIGGER `trick_trigger` BEFORE INSERT ON `Trick` FOR EACH ROW BEGIN
 	IF NEW.FirstSeat NOT BETWEEN 1 AND 4 THEN
 		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'FirstSeat not in range 1-4';
     ELSEIF NEW.WinningSeat NOT BETWEEN 1 AND 4 THEN
@@ -223,7 +223,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `BoardSearch`(BoardIDInput INT)
+CREATE PROCEDURE `BoardSearch`(BoardIDInput INT)
 BEGIN
     SELECT * FROM BridgeDB.Board WHERE BoardID = BoardIDInput;
 END ;;
@@ -242,7 +242,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `BoardsInTournament`(InputName VARCHAR(255))
+CREATE PROCEDURE `BoardsInTournament`(InputName VARCHAR(255))
 BEGIN
     SELECT *
     FROM BridgeDB.Board
@@ -264,7 +264,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `BoardsPerTournament`()
+CREATE PROCEDURE `BoardsPerTournament`()
 BEGIN
   SELECT TournamentName, COUNT(*) 
   FROM BridgeDB.Board 
@@ -286,7 +286,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `DealerSearch`(DealerInput INT)
+CREATE PROCEDURE `DealerSearch`(DealerInput INT)
 BEGIN
     SELECT * FROM BridgeDB.Board WHERE Dealer = DealerInput;
 END ;;
@@ -305,7 +305,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `EndingBidSearch`(EndingBidInput VARCHAR(10))
+CREATE PROCEDURE `EndingBidSearch`(EndingBidInput VARCHAR(10))
 BEGIN
     SELECT * FROM BridgeDB.TableEntity WHERE SUBSTRING(LastBid, 3, 2) = EndingBidInput;
 END ;;
@@ -324,7 +324,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `GetSeat`(TableIDInput INT, PlayerNameInput varchar(255), TeamNameInput varchar(255))
+CREATE PROCEDURE `GetSeat`(TableIDInput INT, PlayerNameInput varchar(255), TeamNameInput varchar(255))
 BEGIN
     SELECT Seat FROM BridgeDB.PlaysTable WHERE TableID = TableIDInput AND PlayerName = PlayerNameInput AND TeamName = TeamNameInput;
 END ;;
@@ -343,7 +343,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `HCPSearchInRange`(Upper INT, Lower INT)
+CREATE PROCEDURE `HCPSearchInRange`(Upper INT, Lower INT)
 BEGIN
     SELECT * FROM BridgeDB.Hands WHERE HighCardPoints >= Upper AND HighCardPoints <= Lower;
 END ;;
@@ -362,7 +362,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`bob`@`%` PROCEDURE `new_procedure`()
+CREATE PROCEDURE `new_procedure`()
 BEGIN
 	WITH Team_HCP(BoardID, Value, Position) AS
     (SELECT h1.BoardID, h1.HighCardPoints + h2.HighCardPoints, h1.Position
@@ -391,7 +391,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `PlayerSearch`(PlayerNameInput VARCHAR(255))
+CREATE PROCEDURE `PlayerSearch`(PlayerNameInput VARCHAR(255))
 BEGIN
     SELECT * FROM BridgeDB.Player WHERE Name = PlayerNameInput;
 END ;;
@@ -410,7 +410,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `PlayerSearchByTeam`(TeamNameInput VARCHAR(255))
+CREATE PROCEDURE `PlayerSearchByTeam`(TeamNameInput VARCHAR(255))
 BEGIN
     SELECT * FROM BridgeDB.Player WHERE TeamName = TeamNameInput;
 END ;;
@@ -429,7 +429,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `RawScoreSearch`(RawScoreInputLow INT, RawScoreInputHi INT)
+CREATE PROCEDURE `RawScoreSearch`(RawScoreInputLow INT, RawScoreInputHi INT)
 BEGIN
     SELECT * FROM BridgeDB.TableEntity WHERE RawScore BETWEEN RawScoreInputLow AND RawScoreInputHi;
 END ;;
@@ -448,7 +448,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `RoundSearch`(InputName VARCHAR(255))
+CREATE PROCEDURE `RoundSearch`(InputName VARCHAR(255))
 BEGIN
     SELECT * FROM BridgeDB.Round WHERE TournamentName = InputName;
 END ;;
@@ -467,7 +467,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `SlamBidAndMade`()
+CREATE PROCEDURE `SlamBidAndMade`()
 BEGIN
   SELECT *
   FROM BridgeDB.TableEntity
@@ -488,7 +488,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `StartingBidSearch`(StartingBidInput VARCHAR(10))
+CREATE PROCEDURE `StartingBidSearch`(StartingBidInput VARCHAR(10))
 BEGIN
     SELECT * FROM BridgeDB.TableEntity WHERE SUBSTRING(FirstBid, 3, 2) = StartingBidInput;
 END ;;
@@ -507,7 +507,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `SuitSearch`(SpadesInput INT, HeartsInput INT, DiamondsInput INT, ClubsInput INT)
+CREATE PROCEDURE `SuitSearch`(SpadesInput INT, HeartsInput INT, DiamondsInput INT, ClubsInput INT)
 BEGIN
     SELECT * 
     FROM BridgeDB.Hands 
@@ -528,7 +528,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `TableInTournament`(InputName VARCHAR(255))
+CREATE PROCEDURE `TableInTournament`(InputName VARCHAR(255))
 BEGIN
     SELECT TableID, PairedTableID, BoardID, BidPhase, FirstBid, LastBid, Result, RawScore
     FROM BridgeDB.Round 
@@ -551,7 +551,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `table_by_player`(PlayerIn VARCHAR(255), TeamIn VARCHAR(255))
+CREATE PROCEDURE `table_by_player`(PlayerIn VARCHAR(255), TeamIn VARCHAR(255))
 BEGIN
 	SELECT TableID, PairedTableID, BoardID, BidPhase, FirstBid, LastBid, Result, RawScore
 	FROM BridgeDB.PlaysTable
@@ -573,7 +573,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `TotalImpByTeam`()
+CREATE PROCEDURE `TotalImpByTeam`()
 BEGIN
 	SELECT TeamName, SUM(Imp) AS TotalImp
 	FROM ((
@@ -602,7 +602,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `TotalTricksByPlayer`(PlayerNameInput VARCHAR(255), TeamNameInput VARCHAR(255))
+CREATE PROCEDURE `TotalTricksByPlayer`(PlayerNameInput VARCHAR(255), TeamNameInput VARCHAR(255))
 BEGIN
     SELECT count(*)
     FROM (SELECT TableID, Seat FROM BridgeDB.PlaysTable WHERE PlayerName = PlayerNameInput AND TeamName = TeamNameInput) AS T
@@ -624,7 +624,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `TricksForTable`(TableIdInput INT)
+CREATE PROCEDURE `TricksForTable`(TableIdInput INT)
 BEGIN
     SELECT *
     FROM BridgeDB.Trick
@@ -646,7 +646,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`bob`@`%` PROCEDURE `TwoBidsOneMade`()
+CREATE PROCEDURE `TwoBidsOneMade`()
 BEGIN
 	SELECT DISTINCT *
     FROM BridgeDB.TableEntity AS t1
@@ -668,7 +668,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `UnderDogSearch`()
+CREATE PROCEDURE `UnderDogSearch`()
 BEGIN
 	WITH Team_HCP(BoardID, Val, Position) AS
     (SELECT h1.BoardID, h1.HighCardPoints + h2.HighCardPoints, h1.Position
@@ -696,7 +696,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `UpdateName`(OldPlayer VARCHAR(255), NewPlayer VARCHAR(255), TeamNameIn VARCHAR(255))
+CREATE PROCEDURE `UpdateName`(OldPlayer VARCHAR(255), NewPlayer VARCHAR(255), TeamNameIn VARCHAR(255))
 BEGIN
 	DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -746,7 +746,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`bob`@`%` PROCEDURE `VoidHandSearch`()
+CREATE PROCEDURE `VoidHandSearch`()
 BEGIN
 	SELECT *
     FROM Hands
@@ -767,7 +767,7 @@ DELIMITER ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`mark`@`%` PROCEDURE `VulnerabilitySearch`(VulnType char(1))
+CREATE PROCEDURE `VulnerabilitySearch`(VulnType char(1))
 BEGIN
     SELECT * FROM BridgeDB.Board WHERE Vulnerability IN (VulnType, 'B');
 END ;;
