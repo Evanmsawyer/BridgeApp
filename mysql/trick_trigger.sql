@@ -1,0 +1,13 @@
+SET DELIMITER $$
+CREATE TRIGGER trick_trigger BEFORE INSERT ON Trick
+FOR EACH ROW
+BEGIN
+	IF NEW.FirstSeat NOT BETWEEN 1 AND 4 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'FirstSeat not in range 1-4';
+    ELSEIF NEW.WinningSeat NOT BETWEEN 1 AND 4 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'WinningSeat not in range 1-4'; 
+    ELSEIF EXISTS (SELECT * FROM Trick WHERE Trick.TrickNumber = NEW.TrickNumber AND Trick.TableID = NEW.TableID) THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Trick entry already exists';
+    END IF;
+END$$
+SET DELIMITER ;
