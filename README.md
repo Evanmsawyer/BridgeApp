@@ -21,21 +21,27 @@ The rest of this guide will assume you are using MySQL 8.0 Community Server or l
 You can download MySQL [here](https://dev.mysql.com/downloads/) by selecting "MySQL Community Server", and you can
 download MySQL Workbench at the same link by selecting "MySQL Workbench".
 
-## Installation
+## Installation/Setup
 
 ### Setting up the database
 
 If you are connecting to an instance of the database that is already set up, you can skip to "Connecting the frontend". Otherwise, there are two ways to create the database:
 creating the schema and inserting the data manually, or creating the schema and inserting the pre-acquired data via the same .sql file.
 
-#### Inserting Data Automatically
+#### Inserting data automatically
 
 To insert data from the provided sql dump, open the database using MySQL Workbench, then open a new query tab and select "SchemaAndDataDump.sql" from this repository's mysql directory.
 
-#### Inserting Data Manually
+#### Inserting data manually
 
 To insert data manually, first create the schema by executing "SchemaOnlyDump.sql" from this repository's mysql directory, following the instructions from "Inserting Data Automatically".
 After creating the schema, consult the README in the data directory for details on the data insertion process.
 
-### Connecting the frontend
+### Connecting the frontend to the database
 
+To connect the frontend application to the database, open "db_config.json" in the app directory, and change the fields to the appropriate values corresponding to your database
+(Ex. "host": "localhost", "user": "admin", "password": "password"). These values should correspond to a user in your MySQL database.
+
+## Starting the app
+
+To start the application, navigate to the app directory and run the command `py interface.py`.
